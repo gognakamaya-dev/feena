@@ -1,0 +1,67 @@
+# How Feena boots and tests your app. Copy to feena.yaml and edit.
+
+target:
+  # A docker-compose file that starts your app and its dependencies.
+  # Feena brings this up on a private, no-egress network.
+  compose: ./docker-compose.yml
+  # The service in that compose file that serves HTTP, and the port it listens on
+  # *inside* the container. Feena maps it to a random host port.
+  service: web
+  port: 3000
+  # A path Feena can poll to know the app is ready.
+  healthcheck: /api/health
+  # Max seconds to wait for the app to become healthy.
+  boot_timeout: 120
+
+# Seed accounts the agents log in as. The hostile agent uses two normal accounts
+# (attacker + victim) to test access control by observation, never by damaging data.
+users:
+  - label: alice
+    email: alice@example.com
+    password: password123
+  - label: bob
+    email: bob@example.com
+    password: password123
+
+# What the agents are allowed to touch. Everything is inside the sandbox anyway,
+# but scope keeps runs focused and fast.
+scope:
+  include:
+    - "/"
+  exclude:
+    - "/admin/danger"      # e.g. a real "delete everything" button you don't want exercised
+
+run:
+  agents: [regular, clumsy, hostile]
+  # Wall-clock budget per agent, in seconds. Keeps a PR check from running forever.
+  budget_seconds: 300
+  # Cap on LLM steps per agent (cost control for the exploratory agents).
+  max_steps: 40
+  headed: false
+
+report:
+  # Where findings, recordings, and generated regression tests are written.
+  out_dir: ./.feena
+  # "markdown" for local runs, "github" to post a PR comment (needs GITHUB_TOKEN).
+  format: markdown
+
+# Optional positive HTTP journeys, run independently of finding baselines.
+# See README: "Verification and positive user outcomes" for a read/update/read-back example.
+# Configure only disposable seeded data; steps can mutate the app.
+outcomes: []
+
+# Browser journeys across network conditions. See examples/resilient-checkout/feena.yaml.
+# No LLM required: feena simulate --url http://localhost:5055
+scenarios: []
+
+# Signed, auditor-ready record of each run (see `feena keygen`, `feena verify`).
+attest:
+  enabled: false
+  key: ./feena_signing.key
+
+# Opt-in, anonymised findings corpus. Records patterns only: no URLs, data, or repo names.
+# Nothing leaves your machine unless you run `feena corpus upload`.
+corpus:
+  enabled: false
+  stack: nextjs-postgres
+  endpoint: null
