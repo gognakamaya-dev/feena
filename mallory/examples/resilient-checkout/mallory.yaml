@@ -1,0 +1,56 @@
+target:
+  compose: ''
+  service: web
+  port: 5055
+  healthcheck: /api/health
+run:
+  agents: []
+scenarios:
+  - name: retry-checkout
+    goal: Complete one order even when a request is delayed, aborted, or committed but its response is lost.
+    timeout_ms: 5000
+    steps:
+      - {action: goto, target: /}
+      - {action: click, target: "#checkout"}
+      - {action: wait, wait_ms: 700}
+      - {action: click, target: "#checkout"}
+      - {action: wait, wait_ms: 700}
+    assertions:
+      - {kind: text, target: "#status", expected: "Order confirmed."}
+      - {kind: text, target: "#count", expected: "1"}
+      - {kind: json, target: /api/state, expected: {orders: 1}}
+    profiles:
+      - {name: normal, effect: normal}
+      - {name: slow-response, effect: delay, path: /api/orders, method: POST, delay_ms: 250}
+      - {name: aborted-request, effect: abort, path: /api/orders, method: POST}
+      - {name: lost-response, effect: drop_response, path: /api/orders, method: POST}
+
+  - name: broken-idempotency
+    goal: Detect a duplicate backend order after a committed order response is lost.
+    timeout_ms: 5000
+    steps:
+      - {action: goto, target: "/?broken=1"}
+      - {action: click, target: "#checkout"}
+      - {action: wait, wait_ms: 700}
+      - {action: click, target: "#checkout"}
+      - {action: wait, wait_ms: 700}
+    assertions:
+      - {kind: text, target: "#status", expected: "Order confirmed."}
+      - {kind: json, target: /api/state, expected: {orders: 1}}
+    profiles:
+      - {name: lost-response, effect: drop_response, path: /api/orders, method: POST}
+
+  - name: offline-recovery
+    goal: Recover from an offline attempt without creating duplicate orders.
+    timeout_ms: 5000
+    steps:
+      - {action: goto, target: /}
+      - {action: offline}
+      - {action: click, target: "#checkout"}
+      - {action: wait, wait_ms: 500}
+      - {action: online}
+      - {action: click, target: "#checkout"}
+      - {action: wait, wait_ms: 700}
+    assertions:
+      - {kind: text, target: "#status", expected: "Order confirmed."}
+      - {kind: json, target: /api/state, expected: {orders: 1}}

@@ -1,0 +1,14 @@
+.hoplite/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+.venv/
+.mallory/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+*.key

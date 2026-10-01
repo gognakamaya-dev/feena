@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.mallory/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+mallory_signing.key
+*.key
