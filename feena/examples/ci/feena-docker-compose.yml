@@ -1,0 +1,25 @@
+# Drop into .github/workflows/feena.yml. Your app is started by a normal step; Feena attaches
+# to it on the runner. No API key, no secrets.
+name: Feena
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write     # lets Feena update its single PR comment
+
+jobs:
+  feena:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start the app (test database, seeded test accounts)
+        run: docker compose up -d --build --wait   # --wait blocks on the service healthcheck
+
+      - uses: OWNER/feena@v0            # replace OWNER; or `uses: ./` if vendored in your repo
+        with:
+          url: http://localhost:3000
+          fail-on: high                    # fail the PR on NEW findings at or above this
+          # tests: tests/feena           # committed regression tests (see `feena adopt`)
+          # baseline: feena.baseline.json

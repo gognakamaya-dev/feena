@@ -1,0 +1,26 @@
+# Same idea for an app you start directly (Node shown; any stack works).
+name: Feena
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  feena:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Start the app against a throwaway test database
+        run: npm run start:test &        # background; Feena waits for it to be healthy
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5432/test
+          PORT: 3000
+      - uses: OWNER/feena@v0
+        with:
+          url: http://localhost:3000
+          wait: 120

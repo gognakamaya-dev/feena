@@ -1,4 +1,4 @@
-name: Mallory tests
+name: Feena tests
 on: [push, pull_request]
 permissions:
   contents: read
@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: mallory
+        working-directory: feena
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
