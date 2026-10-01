@@ -1,0 +1,12 @@
+FROM python:3.12-slim
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 PLAYWRIGHT_BROWSERS_PATH=/opt/browsers
+COPY pyproject.toml README.md ./
+COPY src ./src
+COPY examples/resilient-checkout ./examples/resilient-checkout
+RUN pip install --no-cache-dir '.[pilot]' && python -m playwright install --with-deps chromium \
+    && useradd --create-home --uid 10001 feena \
+    && mkdir /app/data && chown feena:feena /app/data
+USER feena
+EXPOSE 10000
+CMD ["python", "-m", "feena.hosted_pilot"]
