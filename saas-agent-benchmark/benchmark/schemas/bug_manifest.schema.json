@@ -1,0 +1,4 @@
+{"$schema":"http://json-schema.org/draft-07/schema#","title":"Hidden bug manifest","type":"object","required":["application","application_id","bugs"],
+ "properties":{"application":{"type":"string"},"application_id":{"type":"string"},"bugs":{"type":"array","minItems":5,"maxItems":10,"items":{"type":"object",
+ "required":["id","category","difficulty","severity","description","affected_component","expected_behavior","trigger_conditions","reproduction_steps","expected_result","actual_result","multi_step"],
+ "properties":{"difficulty":{"enum":["easy","medium","hard","very_hard"]},"severity":{"enum":["low","medium","high","critical"]},"multi_step":{"type":"boolean"}}}}}}

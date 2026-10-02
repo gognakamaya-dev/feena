@@ -1,0 +1,119 @@
+{
+  "application": "FormStacker",
+  "application_id": "formstacker",
+  "bugs": [
+    {
+      "id": "FS-001",
+      "category": "frontend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "email_validation",
+      "description": "Client email validation only checks for '@'.",
+      "trigger_conditions": [
+        "Email like 'bob@'"
+      ],
+      "reproduction_steps": [
+        "Submit form with email 'bob@'"
+      ],
+      "expected_behavior": "Validation error",
+      "expected_result": "Validation error",
+      "actual_result": "Accepted client-side",
+      "multi_step": false
+    },
+    {
+      "id": "FS-002",
+      "category": "backend",
+      "difficulty": "medium",
+      "severity": "medium",
+      "affected_component": "required_validation",
+      "description": "Required number fields reject the value 0 as missing.",
+      "trigger_conditions": [
+        "Required number field answered with 0"
+      ],
+      "reproduction_steps": [
+        "Submit feedback form with rating 0"
+      ],
+      "expected_behavior": "201 accepted",
+      "expected_result": "201 accepted",
+      "actual_result": "400 'Rating is required'",
+      "multi_step": false
+    },
+    {
+      "id": "FS-003",
+      "category": "backend",
+      "difficulty": "medium",
+      "severity": "medium",
+      "affected_component": "form_deadline",
+      "description": "Form is closed on its closing day instead of after it.",
+      "trigger_conditions": [
+        "Submission on closes_at date"
+      ],
+      "reproduction_steps": [
+        "Create+publish form closing today",
+        "Submit"
+      ],
+      "expected_behavior": "Accepted until end of closing day",
+      "expected_result": "Accepted until end of closing day",
+      "actual_result": "410 form closed",
+      "multi_step": false
+    },
+    {
+      "id": "FS-004",
+      "category": "security",
+      "difficulty": "medium",
+      "severity": "critical",
+      "affected_component": "response_access",
+      "description": "Responses endpoint is not scoped to the caller's organization.",
+      "trigger_conditions": [
+        "Admin of another org"
+      ],
+      "reproduction_steps": [
+        "Login as globex admin",
+        "GET /api/forms/1/responses"
+      ],
+      "expected_behavior": "404",
+      "expected_result": "404",
+      "actual_result": "Returns Acme responses incl. emails",
+      "multi_step": false
+    },
+    {
+      "id": "FS-005",
+      "category": "database",
+      "difficulty": "hard",
+      "severity": "high",
+      "affected_component": "response_limit",
+      "description": "Soft-deleted responses still count toward max_responses.",
+      "trigger_conditions": [
+        "Form at capacity with a deleted response"
+      ],
+      "reproduction_steps": [
+        "Fill form to its limit",
+        "Delete one response",
+        "Submit again"
+      ],
+      "expected_behavior": "Submission accepted",
+      "expected_result": "Submission accepted",
+      "actual_result": "409 limit reached",
+      "multi_step": true
+    },
+    {
+      "id": "FS-006",
+      "category": "backend",
+      "difficulty": "very_hard",
+      "severity": "medium",
+      "affected_component": "duplicate_detection",
+      "description": "Duplicate-submission check is case-sensitive on email.",
+      "trigger_conditions": [
+        "Same email in different case"
+      ],
+      "reproduction_steps": [
+        "Submit as Dup@Example.test",
+        "Submit as dup@example.test"
+      ],
+      "expected_behavior": "409 already submitted",
+      "expected_result": "409 already submitted",
+      "actual_result": "Second response stored",
+      "multi_step": true
+    }
+  ]
+}

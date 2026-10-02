@@ -1,0 +1,120 @@
+{
+  "application": "StockPilot",
+  "application_id": "stockpilot",
+  "bugs": [
+    {
+      "id": "SP-001",
+      "category": "backend",
+      "difficulty": "easy",
+      "severity": "medium",
+      "affected_component": "product_creation",
+      "description": "Duplicate SKUs are accepted within an organization.",
+      "trigger_conditions": [
+        "Create product with existing SKU"
+      ],
+      "reproduction_steps": [
+        "POST /api/products with sku WID-001"
+      ],
+      "expected_behavior": "409",
+      "expected_result": "409",
+      "actual_result": "201 duplicate SKU",
+      "multi_step": false
+    },
+    {
+      "id": "SP-002",
+      "category": "frontend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "low_stock_summary",
+      "description": "Low-stock count uses < rather than <= reorder level.",
+      "trigger_conditions": [
+        "on_hand equals reorder_level"
+      ],
+      "reproduction_steps": [
+        "View products with on_hand == reorder_level"
+      ],
+      "expected_behavior": "Counted as low stock",
+      "expected_result": "Counted as low stock",
+      "actual_result": "Not counted",
+      "multi_step": false
+    },
+    {
+      "id": "SP-003",
+      "category": "business_logic",
+      "difficulty": "medium",
+      "severity": "medium",
+      "affected_component": "low_stock_report",
+      "description": "Low-stock report ignores reserved quantity.",
+      "trigger_conditions": [
+        "Confirmed order reserving stock"
+      ],
+      "reproduction_steps": [
+        "Confirm order reserving 35 of 40",
+        "GET low-stock report"
+      ],
+      "expected_behavior": "Product listed (available 5 <= 10)",
+      "expected_result": "Product listed (available 5 <= 10)",
+      "actual_result": "Product missing",
+      "multi_step": true
+    },
+    {
+      "id": "SP-004",
+      "category": "security",
+      "difficulty": "medium",
+      "severity": "high",
+      "affected_component": "adjust_authorization",
+      "description": "Viewer role can adjust stock.",
+      "trigger_conditions": [
+        "viewer login"
+      ],
+      "reproduction_steps": [
+        "POST /api/products/1/adjust as viewer"
+      ],
+      "expected_behavior": "403",
+      "expected_result": "403",
+      "actual_result": "200",
+      "multi_step": false
+    },
+    {
+      "id": "SP-005",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "high",
+      "affected_component": "order_cancellation",
+      "description": "Cancelling a confirmed order does not release reserved stock.",
+      "trigger_conditions": [
+        "Confirm then cancel"
+      ],
+      "reproduction_steps": [
+        "Confirm order",
+        "Cancel",
+        "Read available"
+      ],
+      "expected_behavior": "available restored",
+      "expected_result": "available restored",
+      "actual_result": "available permanently reduced",
+      "multi_step": true
+    },
+    {
+      "id": "SP-006",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "critical",
+      "affected_component": "stock_adjustment",
+      "description": "Manual adjustment may reduce on-hand below reserved quantity, later driving stock negative on shipment.",
+      "trigger_conditions": [
+        "Reservation exists, then large negative adjustment"
+      ],
+      "reproduction_steps": [
+        "Confirm order for 30",
+        "Adjust -35",
+        "Ship order",
+        "Read on_hand"
+      ],
+      "expected_behavior": "409 on adjust",
+      "expected_result": "409 on adjust",
+      "actual_result": "adjust succeeds; shipping makes on_hand negative",
+      "multi_step": true
+    }
+  ]
+}

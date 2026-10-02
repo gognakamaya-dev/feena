@@ -1,0 +1,119 @@
+{
+  "application": "SubscriptionPilot",
+  "application_id": "subscriptionpilot",
+  "bugs": [
+    {
+      "id": "SUB-001",
+      "category": "backend",
+      "difficulty": "easy",
+      "severity": "medium",
+      "affected_component": "subscribe",
+      "description": "A customer can hold duplicate active subscriptions to the same plan.",
+      "trigger_conditions": [
+        "Subscribe twice to one plan"
+      ],
+      "reproduction_steps": [
+        "POST subscription customer 5 plan 1 twice"
+      ],
+      "expected_behavior": "409 on second",
+      "expected_result": "409 on second",
+      "actual_result": "201 second subscription",
+      "multi_step": false
+    },
+    {
+      "id": "SUB-002",
+      "category": "frontend",
+      "difficulty": "easy",
+      "severity": "medium",
+      "affected_component": "mrr_summary",
+      "description": "MRR summary adds annual plan prices as if they were monthly.",
+      "trigger_conditions": [
+        "Annual plan among active subscriptions"
+      ],
+      "reproduction_steps": [
+        "Open Subscriptions tab"
+      ],
+      "expected_behavior": "Annual price / 12",
+      "expected_result": "Annual price / 12",
+      "actual_result": "Full annual price",
+      "multi_step": false
+    },
+    {
+      "id": "SUB-003",
+      "category": "business_logic",
+      "difficulty": "medium",
+      "severity": "high",
+      "affected_component": "coupons",
+      "description": "Coupon max_redemptions is not enforced (single-use coupon works repeatedly).",
+      "trigger_conditions": [
+        "Coupon with max_redemptions 1"
+      ],
+      "reproduction_steps": [
+        "Subscribe customer 4 with LAUNCH20",
+        "Subscribe customer 5 with LAUNCH20"
+      ],
+      "expected_behavior": "409 on second use",
+      "expected_result": "409 on second use",
+      "actual_result": "201 discount applied again",
+      "multi_step": false
+    },
+    {
+      "id": "SUB-004",
+      "category": "business_logic",
+      "difficulty": "medium",
+      "severity": "high",
+      "affected_component": "trials",
+      "description": "Trial subscriptions are charged an initial invoice immediately.",
+      "trigger_conditions": [
+        "Plan with trial_days > 0"
+      ],
+      "reproduction_steps": [
+        "POST subscription on Team plan"
+      ],
+      "expected_behavior": "trialing with no invoice",
+      "expected_result": "trialing with no invoice",
+      "actual_result": "trialing with invoice for full price",
+      "multi_step": false
+    },
+    {
+      "id": "SUB-005",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "high",
+      "affected_component": "proration",
+      "description": "Upgrade charges the full price difference instead of prorating for the remaining period.",
+      "trigger_conditions": [
+        "Mid-period upgrade"
+      ],
+      "reproduction_steps": [
+        "Subscribe to Starter",
+        "change-plan to Pro with effective_on 2026-03-31"
+      ],
+      "expected_behavior": "proration invoice 968 (2000*15/31)",
+      "expected_result": "proration invoice 968 (2000*15/31)",
+      "actual_result": "proration invoice 2000",
+      "multi_step": true
+    },
+    {
+      "id": "SUB-006",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "critical",
+      "affected_component": "renewal_job",
+      "description": "Billing run invoices a subscription scheduled to cancel at period end before cancelling it.",
+      "trigger_conditions": [
+        "cancel_at_period_end subscription reaching period end"
+      ],
+      "reproduction_steps": [
+        "Subscribe",
+        "Cancel at period end",
+        "Run renew job as_of after period end",
+        "Read invoices"
+      ],
+      "expected_behavior": "No renewal invoice, status canceled",
+      "expected_result": "No renewal invoice, status canceled",
+      "actual_result": "Renewal invoice created, status canceled",
+      "multi_step": true
+    }
+  ]
+}

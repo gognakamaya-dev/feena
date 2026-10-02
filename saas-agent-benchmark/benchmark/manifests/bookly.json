@@ -1,0 +1,121 @@
+{
+  "application": "Bookly",
+  "application_id": "bookly",
+  "bugs": [
+    {
+      "id": "BK-001",
+      "category": "backend",
+      "difficulty": "easy",
+      "severity": "medium",
+      "affected_component": "booking_validation",
+      "description": "Appointments can be booked in the past.",
+      "trigger_conditions": [
+        "start earlier than current date"
+      ],
+      "reproduction_steps": [
+        "POST appointment for 2026-03-10"
+      ],
+      "expected_behavior": "400",
+      "expected_result": "400",
+      "actual_result": "201",
+      "multi_step": false
+    },
+    {
+      "id": "BK-002",
+      "category": "frontend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "revenue_summary",
+      "description": "Revenue summary includes cancelled appointments.",
+      "trigger_conditions": [
+        "List with cancelled appointments"
+      ],
+      "reproduction_steps": [
+        "Cancel an appointment",
+        "View Appointments tab summary"
+      ],
+      "expected_behavior": "Revenue only for non-cancelled",
+      "expected_result": "Revenue only for non-cancelled",
+      "actual_result": "Cancelled prices included",
+      "multi_step": false
+    },
+    {
+      "id": "BK-003",
+      "category": "business_logic",
+      "difficulty": "medium",
+      "severity": "high",
+      "affected_component": "conflict_detection",
+      "description": "Conflict detection treats back-to-back appointments as overlapping (inclusive boundary).",
+      "trigger_conditions": [
+        "Second appointment starting exactly when the first ends"
+      ],
+      "reproduction_steps": [
+        "Book 09:00-10:00",
+        "Book 10:00 same staff"
+      ],
+      "expected_behavior": "Second booking allowed",
+      "expected_result": "Second booking allowed",
+      "actual_result": "409 time slot unavailable",
+      "multi_step": false
+    },
+    {
+      "id": "BK-004",
+      "category": "backend",
+      "difficulty": "medium",
+      "severity": "medium",
+      "affected_component": "availability",
+      "description": "Availability still hides slots of cancelled appointments.",
+      "trigger_conditions": [
+        "Cancelled appointment"
+      ],
+      "reproduction_steps": [
+        "Book 09:00",
+        "Cancel",
+        "GET availability"
+      ],
+      "expected_behavior": "09:00 available",
+      "expected_result": "09:00 available",
+      "actual_result": "09:00 missing",
+      "multi_step": false
+    },
+    {
+      "id": "BK-005",
+      "category": "security",
+      "difficulty": "medium",
+      "severity": "high",
+      "affected_component": "cancel_authorization",
+      "description": "Cancel endpoint is not org scoped; any user can cancel another org's appointment.",
+      "trigger_conditions": [
+        "Known appointment id of another org"
+      ],
+      "reproduction_steps": [
+        "As Acme admin POST /api/appointments/<globex id",
+        "/cancel"
+      ],
+      "expected_behavior": "404",
+      "expected_result": "404",
+      "actual_result": "200 and appointment cancelled",
+      "multi_step": false
+    },
+    {
+      "id": "BK-006",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "high",
+      "affected_component": "reschedule",
+      "description": "Rescheduling skips conflict detection.",
+      "trigger_conditions": [
+        "Move appointment onto another booking"
+      ],
+      "reproduction_steps": [
+        "Book A 09:00",
+        "Book B 11:00",
+        "Reschedule B to 09:30"
+      ],
+      "expected_behavior": "409",
+      "expected_result": "409",
+      "actual_result": "200 double booking",
+      "multi_step": true
+    }
+  ]
+}

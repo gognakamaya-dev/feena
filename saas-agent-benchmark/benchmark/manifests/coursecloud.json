@@ -1,0 +1,120 @@
+{
+  "application": "CourseCloud",
+  "application_id": "coursecloud",
+  "bugs": [
+    {
+      "id": "CC-001",
+      "category": "backend",
+      "difficulty": "easy",
+      "severity": "medium",
+      "affected_component": "enrollment",
+      "description": "Students can enroll in unpublished (draft) courses.",
+      "trigger_conditions": [
+        "Draft course id"
+      ],
+      "reproduction_steps": [
+        "As viewer POST /api/courses/3/enroll"
+      ],
+      "expected_behavior": "404/409",
+      "expected_result": "404/409",
+      "actual_result": "201 enrolled",
+      "multi_step": false
+    },
+    {
+      "id": "CC-002",
+      "category": "frontend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "course_summary",
+      "description": "'Published courses' summary counts drafts too.",
+      "trigger_conditions": [
+        "Mixed course statuses"
+      ],
+      "reproduction_steps": [
+        "Open Courses tab as admin"
+      ],
+      "expected_behavior": "Only published counted",
+      "expected_result": "Only published counted",
+      "actual_result": "All rows counted",
+      "multi_step": false
+    },
+    {
+      "id": "CC-003",
+      "category": "business_logic",
+      "difficulty": "medium",
+      "severity": "medium",
+      "affected_component": "progress",
+      "description": "Progress percentage counts optional lessons as completed required work.",
+      "trigger_conditions": [
+        "Complete an optional lesson"
+      ],
+      "reproduction_steps": [
+        "Enroll in course 1",
+        "Complete one required lesson",
+        "Complete optional lesson"
+      ],
+      "expected_behavior": "33%",
+      "expected_result": "33%",
+      "actual_result": "67%",
+      "multi_step": false
+    },
+    {
+      "id": "CC-004",
+      "category": "security",
+      "difficulty": "medium",
+      "severity": "high",
+      "affected_component": "gradebook_access",
+      "description": "Students (viewer role) can read the course gradebook.",
+      "trigger_conditions": [
+        "viewer role"
+      ],
+      "reproduction_steps": [
+        "As viewer GET /api/courses/1/gradebook"
+      ],
+      "expected_behavior": "403",
+      "expected_result": "403",
+      "actual_result": "200 with all students' scores",
+      "multi_step": false
+    },
+    {
+      "id": "CC-005",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "high",
+      "affected_component": "lesson_completion",
+      "description": "Completing the same lesson repeatedly inflates progress (duplicate completion rows).",
+      "trigger_conditions": [
+        "Repeated completion call"
+      ],
+      "reproduction_steps": [
+        "Enroll",
+        "Complete lesson 1 twice",
+        "Read completed count"
+      ],
+      "expected_behavior": "completed = 1",
+      "expected_result": "completed = 1",
+      "actual_result": "completed = 2; certificate reachable early",
+      "multi_step": true
+    },
+    {
+      "id": "CC-006",
+      "category": "business_logic",
+      "difficulty": "very_hard",
+      "severity": "high",
+      "affected_component": "certificates",
+      "description": "Pass mark check rounds the percentage, so 69.5% passes a 70% threshold.",
+      "trigger_conditions": [
+        "Final grade between 69.5% and 70%"
+      ],
+      "reproduction_steps": [
+        "Complete all required lessons",
+        "Record grades 139/200",
+        "Request certificate"
+      ],
+      "expected_behavior": "409 below 70%",
+      "expected_result": "409 below 70%",
+      "actual_result": "Certificate issued",
+      "multi_step": true
+    }
+  ]
+}

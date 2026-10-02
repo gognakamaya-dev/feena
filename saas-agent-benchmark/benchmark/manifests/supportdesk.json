@@ -1,0 +1,120 @@
+{
+  "application": "SupportDesk",
+  "application_id": "supportdesk",
+  "bugs": [
+    {
+      "id": "SD-001",
+      "category": "backend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "ticket_validation",
+      "description": "Ticket priority is not validated.",
+      "trigger_conditions": [
+        "priority outside low/normal/high/urgent"
+      ],
+      "reproduction_steps": [
+        "POST ticket priority 'banana'"
+      ],
+      "expected_behavior": "400",
+      "expected_result": "400",
+      "actual_result": "201",
+      "multi_step": false
+    },
+    {
+      "id": "SD-002",
+      "category": "frontend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "ticket_form_validation",
+      "description": "Subject validation accepts whitespace-only subjects.",
+      "trigger_conditions": [
+        "Subject of spaces"
+      ],
+      "reproduction_steps": [
+        "Enter '   ' as subject"
+      ],
+      "expected_behavior": "Validation error",
+      "expected_result": "Validation error",
+      "actual_result": "Passes",
+      "multi_step": false
+    },
+    {
+      "id": "SD-003",
+      "category": "security",
+      "difficulty": "medium",
+      "severity": "critical",
+      "affected_component": "internal_notes",
+      "description": "Customers (viewer role) can read internal notes on their tickets.",
+      "trigger_conditions": [
+        "Customer opens ticket with internal reply"
+      ],
+      "reproduction_steps": [
+        "Login as viewer",
+        "GET /api/tickets/1"
+      ],
+      "expected_behavior": "Only public replies",
+      "expected_result": "Only public replies",
+      "actual_result": "Internal note visible",
+      "multi_step": false
+    },
+    {
+      "id": "SD-004",
+      "category": "backend",
+      "difficulty": "medium",
+      "severity": "medium",
+      "affected_component": "ticket_search",
+      "description": "Search only matches subject and is case-sensitive in effect.",
+      "trigger_conditions": [
+        "Query text only present in body or different case"
+      ],
+      "reproduction_steps": [
+        "GET /api/tickets?q=DETAILS ABOUT: EXPORT"
+      ],
+      "expected_behavior": "Matches body text case-insensitively",
+      "expected_result": "Matches body text case-insensitively",
+      "actual_result": "No results",
+      "multi_step": false
+    },
+    {
+      "id": "SD-005",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "high",
+      "affected_component": "sla_first_response",
+      "description": "Internal notes count as first response.",
+      "trigger_conditions": [
+        "Internal note before public reply"
+      ],
+      "reproduction_steps": [
+        "Create ticket",
+        "Add internal note",
+        "Read first_response_at"
+      ],
+      "expected_behavior": "first_response_at stays null",
+      "expected_result": "first_response_at stays null",
+      "actual_result": "Timestamp set",
+      "multi_step": true
+    },
+    {
+      "id": "SD-006",
+      "category": "business_logic",
+      "difficulty": "very_hard",
+      "severity": "medium",
+      "affected_component": "resolved_report",
+      "description": "Reopened tickets still counted as resolved because resolved_at is not cleared on customer reopen.",
+      "trigger_conditions": [
+        "Customer replies to resolved ticket"
+      ],
+      "reproduction_steps": [
+        "Resolve ticket",
+        "Read report",
+        "Customer replies",
+        "Read report"
+      ],
+      "expected_behavior": "Resolved count decreases",
+      "expected_result": "Resolved count decreases",
+      "actual_result": "Resolved count unchanged",
+      "multi_step": true
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+.git
+benchmark
+scripts
+.data
+.run
+**/__pycache__
+apps/*/tests
+conftest.py

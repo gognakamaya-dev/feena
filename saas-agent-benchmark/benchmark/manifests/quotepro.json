@@ -1,0 +1,117 @@
+{
+  "application": "QuotePro",
+  "application_id": "quotepro",
+  "bugs": [
+    {
+      "id": "QP-001",
+      "category": "frontend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "quote_form",
+      "description": "Quote form accepts a valid-until date in the past.",
+      "trigger_conditions": [
+        "valid_until in the past"
+      ],
+      "reproduction_steps": [
+        "Enter valid_until 2000-01-01 in New quote form"
+      ],
+      "expected_behavior": "Validation error",
+      "expected_result": "Validation error",
+      "actual_result": "Passes client validation",
+      "multi_step": false
+    },
+    {
+      "id": "QP-002",
+      "category": "backend",
+      "difficulty": "medium",
+      "severity": "medium",
+      "affected_component": "quote_items",
+      "description": "Quote items accept zero or negative quantities.",
+      "trigger_conditions": [
+        "qty <= 0"
+      ],
+      "reproduction_steps": [
+        "POST /api/quotes with qty 0 or -2"
+      ],
+      "expected_behavior": "400",
+      "expected_result": "400",
+      "actual_result": "201 with zero/negative totals",
+      "multi_step": false
+    },
+    {
+      "id": "QP-003",
+      "category": "security",
+      "difficulty": "medium",
+      "severity": "high",
+      "affected_component": "discount_authorization",
+      "description": "Members can apply discounts above the 20% member limit (up to 50%).",
+      "trigger_conditions": [
+        "Member role with discount_pct 40"
+      ],
+      "reproduction_steps": [
+        "As member POST quote discount_pct 40"
+      ],
+      "expected_behavior": "403",
+      "expected_result": "403",
+      "actual_result": "201",
+      "multi_step": false
+    },
+    {
+      "id": "QP-004",
+      "category": "business_logic",
+      "difficulty": "medium",
+      "severity": "medium",
+      "affected_component": "tier_discount",
+      "description": "Volume tier threshold is exclusive: a subtotal of exactly 100000 gets no 5% discount.",
+      "trigger_conditions": [
+        "Subtotal exactly on tier boundary"
+      ],
+      "reproduction_steps": [
+        "POST quote with one item 100000 cents"
+      ],
+      "expected_behavior": "tier 5%, total 95000",
+      "expected_result": "tier 5%, total 95000",
+      "actual_result": "tier 0%, total 100000",
+      "multi_step": false
+    },
+    {
+      "id": "QP-005",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "high",
+      "affected_component": "revisions",
+      "description": "Revising a sent quote leaves the previous version acceptable through its public link.",
+      "trigger_conditions": [
+        "Old public link used after revision"
+      ],
+      "reproduction_steps": [
+        "Create and send quote",
+        "Revise",
+        "Accept using original token"
+      ],
+      "expected_behavior": "409 superseded",
+      "expected_result": "409 superseded",
+      "actual_result": "200 accepted outdated quote",
+      "multi_step": true
+    },
+    {
+      "id": "QP-006",
+      "category": "business_logic",
+      "difficulty": "very_hard",
+      "severity": "high",
+      "affected_component": "optional_items",
+      "description": "Tier discount is computed from all items including unselected optional add-ons.",
+      "trigger_conditions": [
+        "Mandatory subtotal below a tier but with optionals above it"
+      ],
+      "reproduction_steps": [
+        "Create quote with 90000 mandatory + 20000 optional (unselected)",
+        "Read tier discount"
+      ],
+      "expected_behavior": "tier 0%",
+      "expected_result": "tier 0%",
+      "actual_result": "tier 5% applied",
+      "multi_step": true
+    }
+  ]
+}

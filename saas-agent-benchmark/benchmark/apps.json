@@ -1,0 +1,1026 @@
+{
+  "version": 1,
+  "reset_header": "X-Benchmark-Key",
+  "apps": [
+    {
+      "id": "invoiceflow",
+      "name": "InvoiceFlow",
+      "description": "Invoicing and payment tracking for small agencies.",
+      "port": 9101,
+      "base_url": "http://127.0.0.1:9101",
+      "health_url": "http://127.0.0.1:9101/health",
+      "docs_url": "http://127.0.0.1:9101/api/docs",
+      "login_url": "http://127.0.0.1:9101/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9101/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/invoiceflow/README.md",
+      "start_command": "python -m common.run invoiceflow"
+    },
+    {
+      "id": "taskboard",
+      "name": "TaskBoard",
+      "description": "Team project and task management with owners, members and subtasks.",
+      "port": 9102,
+      "base_url": "http://127.0.0.1:9102",
+      "health_url": "http://127.0.0.1:9102/health",
+      "docs_url": "http://127.0.0.1:9102/api/docs",
+      "login_url": "http://127.0.0.1:9102/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9102/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/taskboard/README.md",
+      "start_command": "python -m common.run taskboard"
+    },
+    {
+      "id": "formstacker",
+      "name": "FormStacker",
+      "description": "Form builder with public submission links and response collection.",
+      "port": 9103,
+      "base_url": "http://127.0.0.1:9103",
+      "health_url": "http://127.0.0.1:9103/health",
+      "docs_url": "http://127.0.0.1:9103/api/docs",
+      "login_url": "http://127.0.0.1:9103/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9103/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/formstacker/README.md",
+      "start_command": "python -m common.run formstacker"
+    },
+    {
+      "id": "bookly",
+      "name": "Bookly",
+      "description": "Appointment scheduling for salons and clinics.",
+      "port": 9104,
+      "base_url": "http://127.0.0.1:9104",
+      "health_url": "http://127.0.0.1:9104/health",
+      "docs_url": "http://127.0.0.1:9104/api/docs",
+      "login_url": "http://127.0.0.1:9104/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9104/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/bookly/README.md",
+      "start_command": "python -m common.run bookly"
+    },
+    {
+      "id": "stockpilot",
+      "name": "StockPilot",
+      "description": "Inventory management with stock reservations, orders and low-stock reports.",
+      "port": 9105,
+      "base_url": "http://127.0.0.1:9105",
+      "health_url": "http://127.0.0.1:9105/health",
+      "docs_url": "http://127.0.0.1:9105/api/docs",
+      "login_url": "http://127.0.0.1:9105/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9105/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/stockpilot/README.md",
+      "start_command": "python -m common.run stockpilot"
+    },
+    {
+      "id": "supportdesk",
+      "name": "SupportDesk",
+      "description": "Customer support ticketing with internal notes and SLA tracking. Viewers act as customers.",
+      "port": 9106,
+      "base_url": "http://127.0.0.1:9106",
+      "health_url": "http://127.0.0.1:9106/health",
+      "docs_url": "http://127.0.0.1:9106/api/docs",
+      "login_url": "http://127.0.0.1:9106/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9106/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/supportdesk/README.md",
+      "start_command": "python -m common.run supportdesk"
+    },
+    {
+      "id": "mailforge",
+      "name": "MailForge",
+      "description": "Email campaign management: lists, subscribers, scheduling and engagement stats.",
+      "port": 9107,
+      "base_url": "http://127.0.0.1:9107",
+      "health_url": "http://127.0.0.1:9107/health",
+      "docs_url": "http://127.0.0.1:9107/api/docs",
+      "login_url": "http://127.0.0.1:9107/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9107/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/mailforge/README.md",
+      "start_command": "python -m common.run mailforge"
+    },
+    {
+      "id": "expensetrack",
+      "name": "ExpenseTrack",
+      "description": "Expense reporting with receipts policy, approvals, reimbursements and budgets.",
+      "port": 9108,
+      "base_url": "http://127.0.0.1:9108",
+      "health_url": "http://127.0.0.1:9108/health",
+      "docs_url": "http://127.0.0.1:9108/api/docs",
+      "login_url": "http://127.0.0.1:9108/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9108/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/expensetrack/README.md",
+      "start_command": "python -m common.run expensetrack"
+    },
+    {
+      "id": "teampulse",
+      "name": "TeamPulse",
+      "description": "Employee and team analytics: headcount, weekly pulse surveys, engagement and attrition.",
+      "port": 9109,
+      "base_url": "http://127.0.0.1:9109",
+      "health_url": "http://127.0.0.1:9109/health",
+      "docs_url": "http://127.0.0.1:9109/api/docs",
+      "login_url": "http://127.0.0.1:9109/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9109/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/teampulse/README.md",
+      "start_command": "python -m common.run teampulse"
+    },
+    {
+      "id": "clienthub",
+      "name": "ClientHub",
+      "description": "Lightweight CRM: contacts, companies, deals and pipeline forecasting.",
+      "port": 9110,
+      "base_url": "http://127.0.0.1:9110",
+      "health_url": "http://127.0.0.1:9110/health",
+      "docs_url": "http://127.0.0.1:9110/api/docs",
+      "login_url": "http://127.0.0.1:9110/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9110/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/clienthub/README.md",
+      "start_command": "python -m common.run clienthub"
+    },
+    {
+      "id": "eventpilot",
+      "name": "EventPilot",
+      "description": "Event registration with capacity, waitlists and promo codes.",
+      "port": 9111,
+      "base_url": "http://127.0.0.1:9111",
+      "health_url": "http://127.0.0.1:9111/health",
+      "docs_url": "http://127.0.0.1:9111/api/docs",
+      "login_url": "http://127.0.0.1:9111/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9111/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/eventpilot/README.md",
+      "start_command": "python -m common.run eventpilot"
+    },
+    {
+      "id": "coursecloud",
+      "name": "CourseCloud",
+      "description": "Course management: lessons, enrollment, progress tracking, grades and certificates. Viewers are students.",
+      "port": 9112,
+      "base_url": "http://127.0.0.1:9112",
+      "health_url": "http://127.0.0.1:9112/health",
+      "docs_url": "http://127.0.0.1:9112/api/docs",
+      "login_url": "http://127.0.0.1:9112/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9112/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/coursecloud/README.md",
+      "start_command": "python -m common.run coursecloud"
+    },
+    {
+      "id": "contractvault",
+      "name": "ContractVault",
+      "description": "Contract lifecycle management: versions, approvals, signatures, expirations and renewals.",
+      "port": 9113,
+      "base_url": "http://127.0.0.1:9113",
+      "health_url": "http://127.0.0.1:9113/health",
+      "docs_url": "http://127.0.0.1:9113/api/docs",
+      "login_url": "http://127.0.0.1:9113/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9113/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/contractvault/README.md",
+      "start_command": "python -m common.run contractvault"
+    },
+    {
+      "id": "surveylab",
+      "name": "SurveyLab",
+      "description": "Survey builder with public response collection and analytics.",
+      "port": 9114,
+      "base_url": "http://127.0.0.1:9114",
+      "health_url": "http://127.0.0.1:9114/health",
+      "docs_url": "http://127.0.0.1:9114/api/docs",
+      "login_url": "http://127.0.0.1:9114/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9114/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/surveylab/README.md",
+      "start_command": "python -m common.run surveylab"
+    },
+    {
+      "id": "recruitflow",
+      "name": "RecruitFlow",
+      "description": "Applicant tracking: jobs, public applications, staged pipelines and interview feedback.",
+      "port": 9115,
+      "base_url": "http://127.0.0.1:9115",
+      "health_url": "http://127.0.0.1:9115/health",
+      "docs_url": "http://127.0.0.1:9115/api/docs",
+      "login_url": "http://127.0.0.1:9115/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9115/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/recruitflow/README.md",
+      "start_command": "python -m common.run recruitflow"
+    },
+    {
+      "id": "assetmanager",
+      "name": "AssetManager",
+      "description": "Digital asset management: folders, tags, soft-delete/restore, storage quota and expiring share links.",
+      "port": 9116,
+      "base_url": "http://127.0.0.1:9116",
+      "health_url": "http://127.0.0.1:9116/health",
+      "docs_url": "http://127.0.0.1:9116/api/docs",
+      "login_url": "http://127.0.0.1:9116/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9116/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/assetmanager/README.md",
+      "start_command": "python -m common.run assetmanager"
+    },
+    {
+      "id": "timetrack",
+      "name": "TimeTrack",
+      "description": "Employee time tracking: clock in/out, manual entries, weekly timesheets, approvals and overtime.",
+      "port": 9117,
+      "base_url": "http://127.0.0.1:9117",
+      "health_url": "http://127.0.0.1:9117/health",
+      "docs_url": "http://127.0.0.1:9117/api/docs",
+      "login_url": "http://127.0.0.1:9117/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9117/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/timetrack/README.md",
+      "start_command": "python -m common.run timetrack"
+    },
+    {
+      "id": "quotepro",
+      "name": "QuotePro",
+      "description": "Quotation and proposal generation with catalog items, optional add-ons, tiered discounts and public acceptance links.",
+      "port": 9118,
+      "base_url": "http://127.0.0.1:9118",
+      "health_url": "http://127.0.0.1:9118/health",
+      "docs_url": "http://127.0.0.1:9118/api/docs",
+      "login_url": "http://127.0.0.1:9118/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9118/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/quotepro/README.md",
+      "start_command": "python -m common.run quotepro"
+    },
+    {
+      "id": "analyticshub",
+      "name": "AnalyticsHub",
+      "description": "Product analytics: event ingestion, counts, unique users, funnels and dashboards.",
+      "port": 9119,
+      "base_url": "http://127.0.0.1:9119",
+      "health_url": "http://127.0.0.1:9119/health",
+      "docs_url": "http://127.0.0.1:9119/api/docs",
+      "login_url": "http://127.0.0.1:9119/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9119/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/analyticshub/README.md",
+      "start_command": "python -m common.run analyticshub"
+    },
+    {
+      "id": "subscriptionpilot",
+      "name": "SubscriptionPilot",
+      "description": "Subscription billing: plans, trials, coupons, plan changes with proration, cancellations and renewals.",
+      "port": 9120,
+      "base_url": "http://127.0.0.1:9120",
+      "health_url": "http://127.0.0.1:9120/health",
+      "docs_url": "http://127.0.0.1:9120/api/docs",
+      "login_url": "http://127.0.0.1:9120/api/auth/login",
+      "reset": {
+        "method": "POST",
+        "url": "http://127.0.0.1:9120/__benchmark/reset",
+        "headers": {
+          "X-Benchmark-Key": "benchmark-local"
+        }
+      },
+      "credentials": [
+        {
+          "email": "admin@acme.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "member@acme.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "viewer@acme.test",
+          "password": "demo123",
+          "role": "viewer",
+          "organization": "Acme Corp"
+        },
+        {
+          "email": "admin@globex.test",
+          "password": "demo123",
+          "role": "admin",
+          "organization": "Globex Inc"
+        },
+        {
+          "email": "member@globex.test",
+          "password": "demo123",
+          "role": "member",
+          "organization": "Globex Inc"
+        }
+      ],
+      "readme": "apps/subscriptionpilot/README.md",
+      "start_command": "python -m common.run subscriptionpilot"
+    }
+  ]
+}

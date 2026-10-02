@@ -1,0 +1,119 @@
+{
+  "application": "TimeTrack",
+  "application_id": "timetrack",
+  "bugs": [
+    {
+      "id": "TT-001",
+      "category": "backend",
+      "difficulty": "easy",
+      "severity": "medium",
+      "affected_component": "entry_validation",
+      "description": "Entries with end before start are accepted.",
+      "trigger_conditions": [
+        "end_at < start_at"
+      ],
+      "reproduction_steps": [
+        "POST /api/entries with reversed times"
+      ],
+      "expected_behavior": "400",
+      "expected_result": "400",
+      "actual_result": "201 with negative minutes",
+      "multi_step": false
+    },
+    {
+      "id": "TT-002",
+      "category": "frontend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "hours_summary",
+      "description": "Total hours is rounded to whole hours.",
+      "trigger_conditions": [
+        "Fractional hours"
+      ],
+      "reproduction_steps": [
+        "View entries totalling 150 minutes"
+      ],
+      "expected_behavior": "2.5",
+      "expected_result": "2.5",
+      "actual_result": "3",
+      "multi_step": false
+    },
+    {
+      "id": "TT-003",
+      "category": "business_logic",
+      "difficulty": "medium",
+      "severity": "high",
+      "affected_component": "overlap_detection",
+      "description": "Manual entries can overlap each other (only running timers are checked).",
+      "trigger_conditions": [
+        "Overlapping manual entries"
+      ],
+      "reproduction_steps": [
+        "Add 09-11",
+        "Add 10-12 same day"
+      ],
+      "expected_behavior": "409",
+      "expected_result": "409",
+      "actual_result": "201 overlapping",
+      "multi_step": false
+    },
+    {
+      "id": "TT-004",
+      "category": "security",
+      "difficulty": "medium",
+      "severity": "high",
+      "affected_component": "timesheet_approval",
+      "description": "Any member can approve timesheets, including their own.",
+      "trigger_conditions": [
+        "Member role"
+      ],
+      "reproduction_steps": [
+        "Member submits week",
+        "Member approves own timesheet"
+      ],
+      "expected_behavior": "403",
+      "expected_result": "403",
+      "actual_result": "200 approved",
+      "multi_step": false
+    },
+    {
+      "id": "TT-005",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "high",
+      "affected_component": "timesheet_locking",
+      "description": "Entries remain editable after the timesheet week is approved.",
+      "trigger_conditions": [
+        "Edit after approval"
+      ],
+      "reproduction_steps": [
+        "Submit week",
+        "Admin approves",
+        "PUT entry"
+      ],
+      "expected_behavior": "409 locked",
+      "expected_result": "409 locked",
+      "actual_result": "200 entry changed",
+      "multi_step": true
+    },
+    {
+      "id": "TT-006",
+      "category": "business_logic",
+      "difficulty": "very_hard",
+      "severity": "high",
+      "affected_component": "weekly_report",
+      "description": "Overnight entries spanning Sunday->Monday are attributed fully to the starting week instead of being split.",
+      "trigger_conditions": [
+        "Entry crossing week boundary"
+      ],
+      "reproduction_steps": [
+        "Add entry Sun 22:00 - Mon 04:00",
+        "GET weekly report for Monday's week"
+      ],
+      "expected_behavior": "4 hours in the new week",
+      "expected_result": "4 hours in the new week",
+      "actual_result": "0 hours in new week (6h in old week)",
+      "multi_step": true
+    }
+  ]
+}

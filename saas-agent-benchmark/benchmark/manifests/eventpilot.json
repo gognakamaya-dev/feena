@@ -1,0 +1,119 @@
+{
+  "application": "EventPilot",
+  "application_id": "eventpilot",
+  "bugs": [
+    {
+      "id": "EP-001",
+      "category": "backend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "registration_validation",
+      "description": "Attendee email is not validated.",
+      "trigger_conditions": [
+        "Malformed email"
+      ],
+      "reproduction_steps": [
+        "Register with email 'nope'"
+      ],
+      "expected_behavior": "400",
+      "expected_result": "400",
+      "actual_result": "201",
+      "multi_step": false
+    },
+    {
+      "id": "EP-002",
+      "category": "frontend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "price_display",
+      "description": "Prices are rounded to whole dollars in the UI.",
+      "trigger_conditions": [
+        "Price with cents"
+      ],
+      "reproduction_steps": [
+        "Open Events tab with price 4900/19999"
+      ],
+      "expected_behavior": "$199.99",
+      "expected_result": "$199.99",
+      "actual_result": "$200",
+      "multi_step": false
+    },
+    {
+      "id": "EP-003",
+      "category": "business_logic",
+      "difficulty": "medium",
+      "severity": "high",
+      "affected_component": "capacity",
+      "description": "Capacity check allows one more confirmed registration than capacity.",
+      "trigger_conditions": [
+        "Event at capacity"
+      ],
+      "reproduction_steps": [
+        "Register 3 attendees for capacity-2 event"
+      ],
+      "expected_behavior": "Third waitlisted",
+      "expected_result": "Third waitlisted",
+      "actual_result": "Third confirmed",
+      "multi_step": false
+    },
+    {
+      "id": "EP-004",
+      "category": "backend",
+      "difficulty": "medium",
+      "severity": "medium",
+      "affected_component": "promo_codes",
+      "description": "Promo codes are case-sensitive and silently ignored when case differs.",
+      "trigger_conditions": [
+        "Lowercase promo"
+      ],
+      "reproduction_steps": [
+        "Register with promo_code 'save10'"
+      ],
+      "expected_behavior": "10% discount",
+      "expected_result": "10% discount",
+      "actual_result": "Full price",
+      "multi_step": false
+    },
+    {
+      "id": "EP-005",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "high",
+      "affected_component": "waitlist",
+      "description": "Waitlist promotion is LIFO instead of FIFO.",
+      "trigger_conditions": [
+        "Two waitlisted attendees"
+      ],
+      "reproduction_steps": [
+        "Fill capacity",
+        "Add two waitlisted",
+        "Cancel a confirmed registration"
+      ],
+      "expected_behavior": "Earliest waitlisted confirmed",
+      "expected_result": "Earliest waitlisted confirmed",
+      "actual_result": "Latest waitlisted confirmed",
+      "multi_step": true
+    },
+    {
+      "id": "EP-006",
+      "category": "business_logic",
+      "difficulty": "very_hard",
+      "severity": "high",
+      "affected_component": "cancellation",
+      "description": "Cancelling an already cancelled registration promotes another waitlisted attendee, exceeding capacity.",
+      "trigger_conditions": [
+        "Repeated cancel call"
+      ],
+      "reproduction_steps": [
+        "Fill capacity + 2 waitlisted",
+        "Cancel registration",
+        "Cancel same registration again",
+        "Read stats"
+      ],
+      "expected_behavior": "confirmed stays at capacity",
+      "expected_result": "confirmed stays at capacity",
+      "actual_result": "confirmed exceeds capacity",
+      "multi_step": true
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "application": "ContractVault",
+  "application_id": "contractvault",
+  "bugs": [
+    {
+      "id": "CV-001",
+      "category": "frontend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "contract_form",
+      "description": "Contract form validation does not check end date against start date.",
+      "trigger_conditions": [
+        "end_date before start_date"
+      ],
+      "reproduction_steps": [
+        "Enter start 2026-05-01 end 2026-04-01 in New contract form"
+      ],
+      "expected_behavior": "Validation error",
+      "expected_result": "Validation error",
+      "actual_result": "Form passes validation",
+      "multi_step": false
+    },
+    {
+      "id": "CV-002",
+      "category": "backend",
+      "difficulty": "medium",
+      "severity": "medium",
+      "affected_component": "expiring_report",
+      "description": "Expiring report excludes contracts ending exactly on the last day of the window.",
+      "trigger_conditions": [
+        "end_date == today + days"
+      ],
+      "reproduction_steps": [
+        "GET /api/reports/expiring?days=91 (contract 6 ends day 91)"
+      ],
+      "expected_behavior": "Contract included",
+      "expected_result": "Contract included",
+      "actual_result": "Contract missing",
+      "multi_step": false
+    },
+    {
+      "id": "CV-003",
+      "category": "security",
+      "difficulty": "medium",
+      "severity": "critical",
+      "affected_component": "contract_access",
+      "description": "Contract detail endpoint is not scoped to organization.",
+      "trigger_conditions": [
+        "Foreign contract id"
+      ],
+      "reproduction_steps": [
+        "As Acme admin GET /api/contracts/7"
+      ],
+      "expected_behavior": "404",
+      "expected_result": "404",
+      "actual_result": "200 Globex contract",
+      "multi_step": false
+    },
+    {
+      "id": "CV-004",
+      "category": "database",
+      "difficulty": "medium",
+      "severity": "medium",
+      "affected_component": "versioning",
+      "description": "Changing only the value does not create a new version, so the history misses edits.",
+      "trigger_conditions": [
+        "PUT with only value_cents"
+      ],
+      "reproduction_steps": [
+        "GET versions",
+        "PUT value_cents",
+        "GET versions"
+      ],
+      "expected_behavior": "Version count + 1",
+      "expected_result": "Version count + 1",
+      "actual_result": "Unchanged",
+      "multi_step": true
+    },
+    {
+      "id": "CV-005",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "critical",
+      "affected_component": "approvals",
+      "description": "Editing a contract in review leaves previous approvals intact, so a modified contract can be signed.",
+      "trigger_conditions": [
+        "Edit after approval"
+      ],
+      "reproduction_steps": [
+        "Request approval",
+        "Approver approves",
+        "Edit body",
+        "Admin signs"
+      ],
+      "expected_behavior": "409 re-approval required",
+      "expected_result": "409 re-approval required",
+      "actual_result": "Contract signed",
+      "multi_step": true
+    },
+    {
+      "id": "CV-006",
+      "category": "business_logic",
+      "difficulty": "very_hard",
+      "severity": "medium",
+      "affected_component": "auto_renewal",
+      "description": "Auto-renew extends from today's date instead of the previous end date.",
+      "trigger_conditions": [
+        "Overdue auto-renew contract"
+      ],
+      "reproduction_steps": [
+        "Create auto-renew contract ending 2026-01-31",
+        "Mark signed",
+        "Run expire job"
+      ],
+      "expected_behavior": "end_date 2027-01-31",
+      "expected_result": "end_date 2027-01-31",
+      "actual_result": "end_date 2027-03-15",
+      "multi_step": true
+    }
+  ]
+}

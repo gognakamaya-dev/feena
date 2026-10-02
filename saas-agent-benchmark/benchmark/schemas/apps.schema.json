@@ -1,0 +1,2 @@
+{"$schema":"http://json-schema.org/draft-07/schema#","title":"apps.json","type":"object","required":["apps"],
+ "properties":{"apps":{"type":"array","items":{"type":"object","required":["id","name","description","base_url","health_url","docs_url","reset","credentials"]}}}}

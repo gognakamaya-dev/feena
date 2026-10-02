@@ -1,0 +1,122 @@
+{
+  "application": "RecruitFlow",
+  "application_id": "recruitflow",
+  "bugs": [
+    {
+      "id": "RF-001",
+      "category": "backend",
+      "difficulty": "easy",
+      "severity": "medium",
+      "affected_component": "application_validation",
+      "description": "Candidates can apply to closed jobs.",
+      "trigger_conditions": [
+        "Job status closed"
+      ],
+      "reproduction_steps": [
+        "POST public apply on job 3"
+      ],
+      "expected_behavior": "409",
+      "expected_result": "409",
+      "actual_result": "201",
+      "multi_step": false
+    },
+    {
+      "id": "RF-002",
+      "category": "frontend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "candidate_summary",
+      "description": "'Active candidates' count includes hired and rejected candidates.",
+      "trigger_conditions": [
+        "Mixed stages"
+      ],
+      "reproduction_steps": [
+        "Open Candidates tab"
+      ],
+      "expected_behavior": "Only in-progress counted",
+      "expected_result": "Only in-progress counted",
+      "actual_result": "All rows counted",
+      "multi_step": false
+    },
+    {
+      "id": "RF-003",
+      "category": "business_logic",
+      "difficulty": "medium",
+      "severity": "high",
+      "affected_component": "stage_machine",
+      "description": "Pipeline stages can be skipped (applied -> offer).",
+      "trigger_conditions": [
+        "Jump over stages"
+      ],
+      "reproduction_steps": [
+        "Apply",
+        "POST stage 'offer'"
+      ],
+      "expected_behavior": "409",
+      "expected_result": "409",
+      "actual_result": "200",
+      "multi_step": false
+    },
+    {
+      "id": "RF-004",
+      "category": "security",
+      "difficulty": "medium",
+      "severity": "critical",
+      "affected_component": "application_access",
+      "description": "Application detail is not scoped to organization.",
+      "trigger_conditions": [
+        "Foreign application id"
+      ],
+      "reproduction_steps": [
+        "As Acme admin GET /api/applications/7"
+      ],
+      "expected_behavior": "404",
+      "expected_result": "404",
+      "actual_result": "200",
+      "multi_step": false
+    },
+    {
+      "id": "RF-005",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "high",
+      "affected_component": "hiring",
+      "description": "Hiring a candidate does not close the job.",
+      "trigger_conditions": [
+        "Application reaches hired"
+      ],
+      "reproduction_steps": [
+        "Apply",
+        "screen",
+        "interview",
+        "offer",
+        "hired",
+        "GET pipeline"
+      ],
+      "expected_behavior": "Job closed",
+      "expected_result": "Job closed",
+      "actual_result": "Job still open",
+      "multi_step": true
+    },
+    {
+      "id": "RF-006",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "medium",
+      "affected_component": "interview_scores",
+      "description": "Average score treats unscored interviews as 0.",
+      "trigger_conditions": [
+        "Scheduled interview without feedback"
+      ],
+      "reproduction_steps": [
+        "Schedule two interviews",
+        "Feedback 5 on one",
+        "GET application"
+      ],
+      "expected_behavior": "average_score 5",
+      "expected_result": "average_score 5",
+      "actual_result": "average_score 2.5",
+      "multi_step": true
+    }
+  ]
+}

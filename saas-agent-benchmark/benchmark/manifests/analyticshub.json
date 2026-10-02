@@ -1,0 +1,115 @@
+{
+  "application": "AnalyticsHub",
+  "application_id": "analyticshub",
+  "bugs": [
+    {
+      "id": "AH-001",
+      "category": "backend",
+      "difficulty": "easy",
+      "severity": "medium",
+      "affected_component": "ingestion",
+      "description": "Events with blank/whitespace names are accepted.",
+      "trigger_conditions": [
+        "name '  '"
+      ],
+      "reproduction_steps": [
+        "POST /api/events {name:'  '}"
+      ],
+      "expected_behavior": "400",
+      "expected_result": "400",
+      "actual_result": "201",
+      "multi_step": false
+    },
+    {
+      "id": "AH-002",
+      "category": "frontend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "metrics_summary",
+      "description": "Total events summary shows the largest count instead of the sum.",
+      "trigger_conditions": [
+        "Several event types"
+      ],
+      "reproduction_steps": [
+        "Open Metrics tab"
+      ],
+      "expected_behavior": "Sum of counts",
+      "expected_result": "Sum of counts",
+      "actual_result": "Maximum count",
+      "multi_step": false
+    },
+    {
+      "id": "AH-003",
+      "category": "backend",
+      "difficulty": "medium",
+      "severity": "medium",
+      "affected_component": "date_filter",
+      "description": "The 'to' date filter excludes events on the 'to' day itself.",
+      "trigger_conditions": [
+        "from == to date"
+      ],
+      "reproduction_steps": [
+        "GET /api/metrics/count?event=signup&from=2026-03-02&to=2026-03-02"
+      ],
+      "expected_behavior": "2 events",
+      "expected_result": "2 events",
+      "actual_result": "0 events",
+      "multi_step": false
+    },
+    {
+      "id": "AH-004",
+      "category": "security",
+      "difficulty": "medium",
+      "severity": "critical",
+      "affected_component": "dashboard_access",
+      "description": "Dashboard data endpoint is not scoped to organization.",
+      "trigger_conditions": [
+        "Foreign dashboard id"
+      ],
+      "reproduction_steps": [
+        "As Acme admin GET /api/dashboards/2/data"
+      ],
+      "expected_behavior": "404",
+      "expected_result": "404",
+      "actual_result": "200 Globex metrics",
+      "multi_step": false
+    },
+    {
+      "id": "AH-005",
+      "category": "business_logic",
+      "difficulty": "medium",
+      "severity": "medium",
+      "affected_component": "unique_users",
+      "description": "Anonymous events (null user_key) are counted as one unique user.",
+      "trigger_conditions": [
+        "Events without user_key"
+      ],
+      "reproduction_steps": [
+        "GET /api/metrics/unique-users?event=pageview"
+      ],
+      "expected_behavior": "0",
+      "expected_result": "0",
+      "actual_result": "1",
+      "multi_step": false
+    },
+    {
+      "id": "AH-006",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "high",
+      "affected_component": "funnel",
+      "description": "Funnel ignores step order and counts users who completed steps in any order.",
+      "trigger_conditions": [
+        "User performs step 2 before step 1"
+      ],
+      "reproduction_steps": [
+        "Ingest checkout then cart for one user",
+        "GET funnel steps=cart,checkout"
+      ],
+      "expected_behavior": "checkout step users = 0",
+      "expected_result": "checkout step users = 0",
+      "actual_result": "checkout step users = 1",
+      "multi_step": true
+    }
+  ]
+}

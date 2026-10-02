@@ -1,0 +1,123 @@
+{
+  "application": "ExpenseTrack",
+  "application_id": "expensetrack",
+  "bugs": [
+    {
+      "id": "EX-001",
+      "category": "frontend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "expense_form",
+      "description": "Expense form validation accepts an amount of zero.",
+      "trigger_conditions": [
+        "Amount 0"
+      ],
+      "reproduction_steps": [
+        "Enter amount 0 in New expense form"
+      ],
+      "expected_behavior": "Validation error",
+      "expected_result": "Validation error",
+      "actual_result": "Passes client validation",
+      "multi_step": false
+    },
+    {
+      "id": "EX-002",
+      "category": "business_logic",
+      "difficulty": "medium",
+      "severity": "medium",
+      "affected_component": "receipt_policy",
+      "description": "Receipt policy off by one: exactly $50.00 does not require a receipt.",
+      "trigger_conditions": [
+        "amount_cents == 5000 without receipt"
+      ],
+      "reproduction_steps": [
+        "Create expense 5000 without receipt",
+        "Submit"
+      ],
+      "expected_behavior": "400 receipt required",
+      "expected_result": "400 receipt required",
+      "actual_result": "Submitted",
+      "multi_step": false
+    },
+    {
+      "id": "EX-003",
+      "category": "security",
+      "difficulty": "medium",
+      "severity": "high",
+      "affected_component": "expense_access",
+      "description": "Members can read colleagues' expenses by id.",
+      "trigger_conditions": [
+        "Direct id access"
+      ],
+      "reproduction_steps": [
+        "Admin creates expense",
+        "Member GET /api/expenses/<id",
+        ""
+      ],
+      "expected_behavior": "404/403",
+      "expected_result": "404/403",
+      "actual_result": "200",
+      "multi_step": false
+    },
+    {
+      "id": "EX-004",
+      "category": "business_logic",
+      "difficulty": "medium",
+      "severity": "high",
+      "affected_component": "approvals",
+      "description": "Admins can approve their own expenses.",
+      "trigger_conditions": [
+        "Admin submitter approves own expense"
+      ],
+      "reproduction_steps": [
+        "Admin creates+submits",
+        "Admin approves"
+      ],
+      "expected_behavior": "403 separation of duties",
+      "expected_result": "403 separation of duties",
+      "actual_result": "Approved",
+      "multi_step": false
+    },
+    {
+      "id": "EX-005",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "medium",
+      "affected_component": "budget_status",
+      "description": "Budget status keeps counting rejected expenses.",
+      "trigger_conditions": [
+        "Rejected expense"
+      ],
+      "reproduction_steps": [
+        "Submit expense",
+        "Reject",
+        "GET /api/budgets/status"
+      ],
+      "expected_behavior": "spent unchanged after rejection",
+      "expected_result": "spent unchanged after rejection",
+      "actual_result": "spent includes rejected amount",
+      "multi_step": true
+    },
+    {
+      "id": "EX-006",
+      "category": "backend",
+      "difficulty": "very_hard",
+      "severity": "medium",
+      "affected_component": "category_report",
+      "description": "Monthly report ends at day 30 and drops expenses on the 31st.",
+      "trigger_conditions": [
+        "Expense incurred_on the 31st"
+      ],
+      "reproduction_steps": [
+        "Create expense 2026-03-31",
+        "Submit",
+        "Approve",
+        "GET report month=2026-03"
+      ],
+      "expected_behavior": "Included",
+      "expected_result": "Included",
+      "actual_result": "Excluded",
+      "multi_step": true
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "application": "MailForge",
+  "application_id": "mailforge",
+  "bugs": [
+    {
+      "id": "MF-001",
+      "category": "backend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "subscriber_validation",
+      "description": "Subscriber email format is not validated.",
+      "trigger_conditions": [
+        "Malformed email"
+      ],
+      "reproduction_steps": [
+        "POST /api/lists/1/subscribers {email:'not-an-email'}"
+      ],
+      "expected_behavior": "400",
+      "expected_result": "400",
+      "actual_result": "201 stored",
+      "multi_step": false
+    },
+    {
+      "id": "MF-002",
+      "category": "frontend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "campaign_summary",
+      "description": "Total recipients summary counts campaigns instead of summing recipients.",
+      "trigger_conditions": [
+        "Campaign list with recipient counts"
+      ],
+      "reproduction_steps": [
+        "Open Campaigns tab"
+      ],
+      "expected_behavior": "Sum of recipient_count",
+      "expected_result": "Sum of recipient_count",
+      "actual_result": "Number of rows",
+      "multi_step": false
+    },
+    {
+      "id": "MF-003",
+      "category": "business_logic",
+      "difficulty": "medium",
+      "severity": "critical",
+      "affected_component": "campaign_delivery",
+      "description": "Campaigns are sent to unsubscribed contacts (only bounced are excluded).",
+      "trigger_conditions": [
+        "List with an unsubscribed contact"
+      ],
+      "reproduction_steps": [
+        "Create campaign for list 1",
+        "Send",
+        "Read recipient_count"
+      ],
+      "expected_behavior": "6 recipients",
+      "expected_result": "6 recipients",
+      "actual_result": "7 recipients including unsubscribed",
+      "multi_step": false
+    },
+    {
+      "id": "MF-004",
+      "category": "security",
+      "difficulty": "medium",
+      "severity": "high",
+      "affected_component": "campaign_stats_access",
+      "description": "Campaign stats endpoint is not scoped to organization.",
+      "trigger_conditions": [
+        "Campaign id from another org"
+      ],
+      "reproduction_steps": [
+        "As Acme admin GET /api/campaigns/3/stats"
+      ],
+      "expected_behavior": "404",
+      "expected_result": "404",
+      "actual_result": "200 with other org stats",
+      "multi_step": false
+    },
+    {
+      "id": "MF-005",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "critical",
+      "affected_component": "resubscribe",
+      "description": "Adding an address that previously unsubscribed silently re-subscribes it.",
+      "trigger_conditions": [
+        "Unsubscribed address re-added"
+      ],
+      "reproduction_steps": [
+        "Add subscriber",
+        "Unsubscribe",
+        "Add same email again",
+        "Read status"
+      ],
+      "expected_behavior": "Status remains unsubscribed",
+      "expected_result": "Status remains unsubscribed",
+      "actual_result": "Status flips to subscribed",
+      "multi_step": true
+    },
+    {
+      "id": "MF-006",
+      "category": "backend",
+      "difficulty": "very_hard",
+      "severity": "medium",
+      "affected_component": "scheduler",
+      "description": "Scheduler compares scheduled_at to now as strings, ignoring UTC offsets.",
+      "trigger_conditions": [
+        "scheduled_at with non-UTC offset that is already past in UTC"
+      ],
+      "reproduction_steps": [
+        "Create campaign",
+        "Schedule 2026-03-15T11:00:00+02:00",
+        "Run scheduler"
+      ],
+      "expected_behavior": "Campaign sent (09:00Z is past)",
+      "expected_result": "Campaign sent (09:00Z is past)",
+      "actual_result": "Campaign not sent",
+      "multi_step": true
+    }
+  ]
+}

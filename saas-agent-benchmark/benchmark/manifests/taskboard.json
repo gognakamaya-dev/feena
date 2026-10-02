@@ -1,0 +1,125 @@
+{
+  "application": "TaskBoard",
+  "application_id": "taskboard",
+  "bugs": [
+    {
+      "id": "TB-001",
+      "category": "frontend",
+      "difficulty": "easy",
+      "severity": "low",
+      "affected_component": "task_search",
+      "description": "Client-side task search is case-sensitive.",
+      "trigger_conditions": [
+        "Search text whose case differs from the title"
+      ],
+      "reproduction_steps": [
+        "Open Tasks",
+        "Search 'login'",
+        "Observe 'Fix Login bug' missing"
+      ],
+      "expected_behavior": "Case-insensitive match",
+      "expected_result": "Case-insensitive match",
+      "actual_result": "No match unless case is identical",
+      "multi_step": false
+    },
+    {
+      "id": "TB-002",
+      "category": "backend",
+      "difficulty": "easy",
+      "severity": "medium",
+      "affected_component": "task_update_validation",
+      "description": "PATCH /api/tasks/<id> accepts arbitrary status strings.",
+      "trigger_conditions": [
+        "status not in todo/doing/done"
+      ],
+      "reproduction_steps": [
+        "PATCH task with status 'banana'"
+      ],
+      "expected_behavior": "400 validation error",
+      "expected_result": "400 validation error",
+      "actual_result": "200 and task stored with status 'banana'",
+      "multi_step": false
+    },
+    {
+      "id": "TB-003",
+      "category": "database",
+      "difficulty": "medium",
+      "severity": "medium",
+      "affected_component": "project_stats",
+      "description": "Project stats count soft-deleted tasks in status buckets.",
+      "trigger_conditions": [
+        "At least one deleted task"
+      ],
+      "reproduction_steps": [
+        "Create task",
+        "Delete it",
+        "GET /stats"
+      ],
+      "expected_behavior": "Status buckets equal the visible task count",
+      "expected_result": "Status buckets equal the visible task count",
+      "actual_result": "Deleted task still counted in 'todo'",
+      "multi_step": true
+    },
+    {
+      "id": "TB-004",
+      "category": "security",
+      "difficulty": "medium",
+      "severity": "high",
+      "affected_component": "task_authorization",
+      "description": "Viewer role can modify tasks through PATCH (role not enforced).",
+      "trigger_conditions": [
+        "Logged in as viewer"
+      ],
+      "reproduction_steps": [
+        "Login as viewer@acme.test",
+        "PATCH /api/tasks/1 {title}"
+      ],
+      "expected_behavior": "403",
+      "expected_result": "403",
+      "actual_result": "200 and title changed",
+      "multi_step": false
+    },
+    {
+      "id": "TB-005",
+      "category": "business_logic",
+      "difficulty": "hard",
+      "severity": "high",
+      "affected_component": "ownership_transfer",
+      "description": "After transferring ownership the previous owner keeps owner rights.",
+      "trigger_conditions": [
+        "Transfer ownership then act as old owner"
+      ],
+      "reproduction_steps": [
+        "Create project",
+        "Add member",
+        "Transfer ownership to member",
+        "Old owner archives project"
+      ],
+      "expected_behavior": "403 for the former owner",
+      "expected_result": "403 for the former owner",
+      "actual_result": "Archive succeeds for former owner",
+      "multi_step": true
+    },
+    {
+      "id": "TB-006",
+      "category": "business_logic",
+      "difficulty": "very_hard",
+      "severity": "medium",
+      "affected_component": "subtask_completion",
+      "description": "Parent completion only checks the first subtask, so later open subtasks are ignored.",
+      "trigger_conditions": [
+        "Parent with 2+ subtasks, first done, later open"
+      ],
+      "reproduction_steps": [
+        "Create parent",
+        "Add two subtasks",
+        "Complete first subtask",
+        "Complete parent"
+      ],
+      "expected_behavior": "409 until all subtasks done",
+      "expected_result": "409 until all subtasks done",
+      "actual_result": "Parent marked done with open subtask",
+      "multi_step": true
+    }
+  ]
+}

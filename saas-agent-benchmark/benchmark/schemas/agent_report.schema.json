@@ -1,0 +1,5 @@
+{"$schema":"http://json-schema.org/draft-07/schema#","title":"Agent bug report","type":"object","required":["application","bugs_found"],
+ "properties":{"application":{"type":"string"},"bugs_found":{"type":"array","items":{"type":"object","required":["title","description"],
+ "properties":{"title":{"type":"string"},"severity":{"enum":["low","medium","high","critical"]},"category":{"enum":["frontend","backend","database","security","business_logic"]},
+ "description":{"type":"string"},"reproduction_steps":{"type":"array","items":{"type":"string"}},"expected":{"type":"string"},"actual":{"type":"string"},
+ "evidence":{"type":"array","items":{"type":"string"}},"discovered_at_seconds":{"type":"number","description":"optional seconds since the agent started"}}}}}}

@@ -1,0 +1,47 @@
+# TimeTrack
+
+Employee time tracking: clock in/out, manual entries, weekly timesheets, approvals and overtime.
+
+This is a synthetic benchmark application. It is a small, early-stage product with imperfect production code;
+the intended behaviour is whatever a reasonable product of this kind should do.
+
+- Frontend: open `http://127.0.0.1:9117/` (sign in with a demo account).
+- API docs: `GET /api/docs`. Health: `GET /health`.
+- Data: SQLite, deterministic seed data, fixed application clock (2026-03-15 10:00 UTC, a Sunday).
+- Multi-tenant: two organisations. Users only ever belong to one.
+- Money is in integer cents, dates are ISO-8601.
+
+## Demo credentials
+
+| Email | Password | Role | Organisation |
+|---|---|---|---|
+| admin@acme.test | `demo123` | admin | Acme Corp |
+| member@acme.test | `demo123` | member | Acme Corp |
+| viewer@acme.test | `demo123` | viewer | Acme Corp |
+| admin@globex.test | `demo123` | admin | Globex Inc |
+| member@globex.test | `demo123` | member | Globex Inc |
+
+Log in with `POST /api/auth/login {"email","password"}`, then send `Authorization: Bearer <token>`.
+
+## API
+
+| Method | Path | Roles | Notes |
+|---|---|---|---|
+| GET | `/api/entries` | any signed-in user |  |
+| POST | `/api/entries` | admin, member |  |
+| PUT | `/api/entries/<id>` | admin, member |  |
+| POST | `/api/clock-in` | admin, member |  |
+| POST | `/api/clock-out` | admin, member |  |
+| POST | `/api/timesheets/submit` | admin, member |  |
+| POST | `/api/timesheets/approve` | any signed-in user |  |
+| GET | `/api/reports/weekly` | admin | Hours and overtime (>40h) per user for the Monday-starting ?week_start=. |
+
+## Reset
+
+`POST /__benchmark/reset` with header `X-Benchmark-Key: <BENCH_KEY>` (default `benchmark-local`) restores the database and seed data.
+
+## Run
+
+```bash
+python -m common.run timetrack            # from the repository root; port 9117
+```
