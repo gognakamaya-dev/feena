@@ -56,6 +56,8 @@ class Finding:
     # Machine-readable reproduction, compiled into an executable regression test by regress.py.
     # e.g. {"type": "idor", "path": "/api/tasks/2"}. Empty => no automated regression test.
     repro: dict = field(default_factory=dict)
+    observed_by: list[str] = field(default_factory=list)
+    verification_method: str = "none"
 
     @property
     def fingerprint(self) -> str:
@@ -69,7 +71,9 @@ class Finding:
 def dedup(findings: list[Finding]) -> list[Finding]:
     seen: dict[str, Finding] = {}
     for f in findings:
-        seen.setdefault(f.fingerprint, f)
+        existing = seen.setdefault(f.fingerprint, f)
+        # Corroboration is useful context, never a substitute for replay verification.
+        existing.observed_by = sorted(set(existing.observed_by + [existing.agent, f.agent]))
     return list(seen.values())
 
 
@@ -89,6 +93,7 @@ def confirm(findings: list[Finding], replayer: Replayer) -> tuple[list[Finding],
     """
     confirmed, dropped = [], []
     for f in findings:
+        f.verification_method = "none"
         failure_reason = ""
         try:
             result = replayer(f)
@@ -99,12 +104,16 @@ def confirm(findings: list[Finding], replayer: Replayer) -> tuple[list[Finding],
             f.verification_status = getattr(result.status, "value", str(result.status))
             f.verification_reason = result.reason
             ok = f.verification_status == "reproduced"
+            if ok:
+                f.verification_method = getattr(result, "method", "custom_replay")
         elif result is not None:
             # Preserve the longstanding bool-replayer interface used by callers and tests.
             ok = bool(result)
             f.verification_status = "reproduced" if ok else "not_reproduced"
             f.verification_reason = "Custom replayer reproduced the finding." if ok else \
                 "Custom replayer did not reproduce the finding."
+            if ok:
+                f.verification_method = "custom_replay"
         else:
             ok = False
             f.verification_status = "inconclusive"

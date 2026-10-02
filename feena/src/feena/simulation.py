@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 from playwright.sync_api import BrowserContext, Page, expect, sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
+from .evidence import BrowserEvidence
 from .outcomes import _contains, _local_path
 
 
@@ -59,6 +60,7 @@ def _run_profile(scenario, profile, base_url: str, directory: Path) -> Simulatio
     trace_started = False
     artifact_errors: list[str] = []
     run_started = time.monotonic()
+    evidence = None
     try:
         directory.mkdir(parents=True, exist_ok=False)
         playwright = sync_playwright().start()
@@ -69,6 +71,7 @@ def _run_profile(scenario, profile, base_url: str, directory: Path) -> Simulatio
         )
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
         trace_started = True
+        evidence = BrowserEvidence(context, directory)
 
         def _route_request(route):
             nonlocal matches_seen, faults_applied
@@ -190,6 +193,7 @@ def _run_profile(scenario, profile, base_url: str, directory: Path) -> Simulatio
         if not failure:
             for index, assertion in enumerate(scenario.assertions, 1):
                 assertion_started = time.monotonic()
+                observation = {"target": assertion.target, "expected": assertion.expected}
                 try:
                     if assertion.kind == "json":
                         target = _local_path(assertion.target)
@@ -198,12 +202,15 @@ def _run_profile(scenario, profile, base_url: str, directory: Path) -> Simulatio
                             timeout=scenario.timeout_ms,
                             max_redirects=0,
                         )
+                        observation["actual_status"] = response.status
+                        observation["expected_status"] = assertion.status_code
                         if response.status != assertion.status_code:
                             raise AssertionError(
                                 f"expected HTTP {assertion.status_code}, got {response.status}"
                             )
                         try:
                             actual = response.json()
+                            observation["actual"] = actual
                         except (ValueError, TypeError):
                             raise AssertionError("response was not valid JSON") from None
                         if not _contains(actual, assertion.expected):
@@ -224,11 +231,13 @@ def _run_profile(scenario, profile, base_url: str, directory: Path) -> Simulatio
                         else:
                             raise ValueError("unsupported assertion kind")
                     actions.append({"assertion": index, "kind": assertion.kind,
+                                    **observation,
                                     "status": "passed", "elapsed_ms": round(
                                         (time.monotonic() - assertion_started) * 1000, 3)})
                 except PlaywrightTimeoutError:
                     assertion_failures.append(f"assertion {index} ({assertion.kind}) timed out")
                     actions.append({"assertion": index, "kind": assertion.kind,
+                                    **observation,
                                     "status": "timed_out", "elapsed_ms": round(
                                         (time.monotonic() - assertion_started) * 1000, 3)})
                 except AssertionError:
@@ -236,11 +245,13 @@ def _run_profile(scenario, profile, base_url: str, directory: Path) -> Simulatio
                         f"assertion {index} ({assertion.kind}) did not match expected outcome"
                     )
                     actions.append({"assertion": index, "kind": assertion.kind,
+                                    **observation,
                                     "status": "failed", "elapsed_ms": round(
                                         (time.monotonic() - assertion_started) * 1000, 3)})
                 except Exception as exc:
                     failure = f"assertion {index} failed: {type(exc).__name__}"
                     actions.append({"assertion": index, "kind": assertion.kind,
+                                    **observation,
                                     "status": "error", "error_type": type(exc).__name__,
                                     "elapsed_ms": round(
                                         (time.monotonic() - assertion_started) * 1000, 3)})
@@ -265,6 +276,7 @@ def _run_profile(scenario, profile, base_url: str, directory: Path) -> Simulatio
         for tab, page in pages.items():
             try:
                 if not page.is_closed():
+                    (directory / f"dom-{_safe_name(tab)}.html").write_text(page.content())
                     page.screenshot(path=str(directory / ("final.png" if tab == "main"
                                                           else f"final-{_safe_name(tab)}.png")),
                                     full_page=True, timeout=5000)
@@ -297,6 +309,8 @@ def _run_profile(scenario, profile, base_url: str, directory: Path) -> Simulatio
                 result.status = "inconclusive"
                 result.reason = "required artifacts missing or incomplete"
         try:
+            if evidence is not None:
+                evidence.save()
             (directory / "actions.json").write_text(
                 json.dumps(actions, indent=2) + "\n", encoding="utf-8"
             )
@@ -313,6 +327,9 @@ def _run_profile(scenario, profile, base_url: str, directory: Path) -> Simulatio
                 "elapsed_ms": round((time.monotonic() - run_started) * 1000, 3),
                 "status": result.status,
                 "reason": result.reason,
+                "evidence": {"console": "console.json", "network": "network.json",
+                             "trace": "trace.zip", "screenshot": "final.png",
+                             "dom": "dom-main.html", "actions": "actions.json"},
             }
             (directory / "manifest.json").write_text(
                 json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
@@ -347,4 +364,13 @@ def render_simulations(results: list[SimulationResult]) -> str:
             f"- **{result.status.upper()}** `{result.name}` / `{result.profile}`"
             f"{reason}{artifacts}"
         )
+        if result.artifacts:
+            directory = Path(result.artifacts)
+            links = [f"[{label}]({directory / name})" for label, name in (
+                ("Steps and assertions", "manifest.json"), ("Action log", "actions.json"),
+                ("Console", "console.json"), ("Network", "network.json"),
+                ("DOM", "dom-main.html"), ("Screenshot", "final.png"), ("Trace", "trace.zip"))
+                if (directory / name).is_file()]
+            if links:
+                lines.append("  " + " · ".join(links))
     return "\n".join(lines)

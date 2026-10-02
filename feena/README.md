@@ -293,6 +293,68 @@ apps depending on external authentication, CDNs, or service workers require a su
 fixture. This is not a hardened hosted execution boundary and does not isolate arbitrary
 application code or every networking mechanism.
 
+## Trust packages and portable browser tests
+
+Reports distinguish **Assertion verified** (a built-in deterministic replay reproduced its
+condition), **Replay confirmed** (a custom verifier), and unconfirmed candidates in
+`verification.json`. Deduplication preserves the agents that observed a candidate. Agent
+agreement is corroboration only: it never bypasses the replay gate or earns a “verified by
+two agents” badge.
+
+Each reported finding gets an `evidence/<fingerprint>.json` trust package with its replay
+specification, verification method/reason, steps, evidence references, and test command.
+Missing evidence is explicitly listed. HTTP-only checks do not fabricate browser artifacts.
+Browser sessions record bounded console/error and network status/failure logs; screenshots
+have companion DOM HTML snapshots. Query strings, URL credentials, headers, and request
+bodies are excluded from the network log. Console text, DOM snapshots, traces, scenario
+values, and response evidence can still contain sensitive test data; they remain local.
+
+`feena simulate`, `feena run`, and `feena ci` now export configured browser scenarios and
+fault profiles into `.feena/tests/test_browser_*.py`, alongside portable execution helpers.
+Exports keep the original assertions, shared-tab behavior, and fault-trigger requirements.
+They require pytest and Playwright, with no Feena installation or API key:
+
+```bash
+pip install pytest playwright
+playwright install chromium
+FEENA_BASE_URL=http://localhost:5055 pytest .feena/tests
+```
+
+Reset/seed the target before running. Exports are marked **generated**, not execution-verified:
+run them against your known failing and fixed implementations before adopting them. Missing
+setup, an unavailable browser, and an untriggered fault fail the exported test. Export a
+single recorded profile with:
+
+```bash
+feena export-simulation path/to/manifest.json --out tests/feena
+```
+
+`feena adopt --all` also copies browser and integration helpers. These are Python
+pytest/Playwright exports, not TypeScript `@playwright/test` files. Scenario exports cover
+configured journeys; exploratory findings without replay specifications remain unconfirmed.
+
+## Multi-service integration tests
+
+Add `integrations` to `feena.yaml` to exercise HTTP services without a browser. Each scenario
+has a goal, optional setup/cleanup, and ordered steps with a service name, method, relative
+path, expected HTTP status, and nonempty `expected_json`. Targets come from
+`FEENA_SERVICE_<NAME>_URL` environment variables and must resolve to local/private origins.
+Requests do not follow redirects. Each service gets its own cookie session; authentication
+can be performed as an explicit setup request against a disposable fixture.
+
+```bash
+feena integrate --config examples/service-checkout/feena.yaml
+```
+
+Integrations also run in `feena run` and `feena ci`, and failures/inconclusive results fail
+the command regardless of finding baselines or `--fail-on none`. Standalone pytest/httpx
+tests are written to the configured report directory's `tests/` folder. No browser, model,
+or Feena package is required to run the exports. See the
+[two-service checkout example](examples/service-checkout/README.md) for a payment timeout,
+retry, delayed/duplicate webhook, and assertions on both services. This first adapter uses
+explicit HTTP scenarios; autonomous scenario discovery, queues, and native applications are
+not implemented.
+
 ## MCP server (single-workspace preview)
 
 Install `pip install -e '.[mcp]'` and `playwright install chromium`. The MCP service exposes

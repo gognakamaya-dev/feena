@@ -1,0 +1,31 @@
+target: {compose: "", service: orders, port: 5057}
+run: {agents: []}
+integrations:
+  - name: retry-and-delayed-webhook
+    goal: A timed-out payment, checkout retry, and delayed webhook create one order and one charge.
+    setup:
+      - {service: orders, method: DELETE, path: "/state/${run_id}", expected_json: {cleared: true}}
+      - {service: payments, method: DELETE, path: "/state/${run_id}", expected_json: {cleared: true}}
+    steps:
+      - service: orders
+        method: POST
+        path: "/checkout/${run_id}"
+        expected_status: 504
+        expected_json: {error: payment_pending}
+      - {service: payments, path: "/state/${run_id}", expected_json: {charges: 1}}
+      - {service: orders, method: POST, path: "/checkout/${run_id}", expected_json: {accepted: true}}
+      - service: orders
+        method: POST
+        path: "/webhook/${run_id}"
+        json_body: {event_id: delayed-payment}
+        expected_json: {received: true}
+      - service: orders
+        method: POST
+        path: "/webhook/${run_id}"
+        json_body: {event_id: delayed-payment}
+        expected_json: {received: true}
+      - {service: orders, path: "/state/${run_id}", expected_json: {orders: 1}, poll_seconds: 1}
+      - {service: payments, path: "/state/${run_id}", expected_json: {charges: 1}}
+    cleanup:
+      - {service: orders, method: DELETE, path: "/state/${run_id}", expected_json: {cleared: true}}
+      - {service: payments, method: DELETE, path: "/state/${run_id}", expected_json: {cleared: true}}

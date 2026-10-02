@@ -122,3 +122,38 @@ def test_simulation_config_rejects_invalid_scenario():
             "steps": [{"action": "goto", "target": "https://example.com"}],
             "assertions": [{"kind": "json", "target": "/api/state", "expected": {"orders": 0}}],
         })
+
+
+def test_standalone_browser_exports_catch_duplicate_orders(checkout_server, tmp_path):
+    import os
+    import subprocess
+    import sys
+
+    from feena.exports import write_browser_tests
+
+    base_url, module = checkout_server
+    scenarios = load_config(EXAMPLE / "feena.yaml").scenarios
+    scenarios[0].profiles = [scenarios[0].profiles[-1]]
+    for scenario, expected in ((scenarios[1], 1), (scenarios[0], 0)):
+        module.ORDERS.clear()
+        directory = tmp_path / scenario.name
+        paths = write_browser_tests([scenario], directory)
+        process = subprocess.run([sys.executable, "-m", "pytest", "-q", str(paths[0])],
+                                 cwd=directory, env=os.environ | {"FEENA_BASE_URL": base_url},
+                                 capture_output=True, text=True, timeout=45, check=False)
+        assert process.returncode == expected, process.stdout + process.stderr
+
+
+def test_simulation_trust_artifacts(checkout_server, tmp_path):
+    base_url, _ = checkout_server
+    scenario = BrowserScenario.model_validate({
+        "name": "evidence", "goal": "Capture the browser state with its outcome",
+        "steps": [{"action": "goto", "target": "/"}],
+        "assertions": [{"kind": "visible", "target": "#checkout"}],
+    })
+    result = run_simulations([scenario], base_url, tmp_path)[0]
+    assert result.status == "passed", result.reason
+    manifest = json.loads((result.artifacts / "manifest.json").read_text())
+    assert all((result.artifacts / name).exists() for name in manifest["evidence"].values())
+    assert "checkout" in (result.artifacts / "dom-main.html").read_text()
+    assert any(e.get("status") == 200 for e in json.loads((result.artifacts / "network.json").read_text()))

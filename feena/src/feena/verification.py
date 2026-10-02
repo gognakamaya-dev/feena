@@ -24,6 +24,7 @@ class Status(str, Enum):
 class VerificationResult:
     status: Status
     reason: str
+    method: str = "assertion_replay"
 
 
 def _result(status: Status, reason: str) -> VerificationResult:

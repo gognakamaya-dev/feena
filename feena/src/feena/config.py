@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 import yaml
 from pydantic import BaseModel, Field, field_validator
 
+from .integration_config import IntegrationScenario
 from .simulation_config import BrowserScenario
 
 
@@ -93,6 +94,14 @@ class Config(BaseModel):
     corpus: CorpusConfig = Field(default_factory=CorpusConfig)
     outcomes: list[OutcomeConfig] = Field(default_factory=list)
     scenarios: list[BrowserScenario] = Field(default_factory=list)
+    integrations: list[IntegrationScenario] = Field(default_factory=list)
+
+    @field_validator("integrations")
+    @classmethod
+    def unique_integrations(cls, value):
+        if len({s.name for s in value}) != len(value):
+            raise ValueError("integration names must be unique")
+        return value
 
     @field_validator("scenarios")
     @classmethod
