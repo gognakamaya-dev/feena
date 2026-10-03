@@ -7,8 +7,11 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Self
 
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
+
+from .evidence import BrowserEvidence
 
 
 class Session:
@@ -20,8 +23,9 @@ class Session:
         self._browser: Browser | None = None
         self._context: BrowserContext | None = None
         self.page: Page | None = None
+        self.evidence: BrowserEvidence | None = None
 
-    def __enter__(self) -> "Session":
+    def __enter__(self) -> Self:
         self._pw = sync_playwright().start()
         self._browser = self._pw.chromium.launch(headless=not self.headed)
         self.out_dir.mkdir(parents=True, exist_ok=True)
@@ -32,6 +36,7 @@ class Session:
         )
         # Trace captures DOM snapshots + actions so a finding can be replayed step by step.
         self._context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        self.evidence = BrowserEvidence(self._context, self.out_dir)
         self.page = self._context.new_page()
         return self
 
@@ -46,18 +51,20 @@ class Session:
         moments the agent explicitly asks for one.
         """
         assert self.page is not None
-        tree = self.page.accessibility.snapshot() or {}
-        return _flatten_ax(tree)
+        return self.page.locator("body").aria_snapshot()
 
     def screenshot(self, name: str) -> Path:
         assert self.page is not None
         p = self.out_dir / f"{name}.png"
         self.page.screenshot(path=str(p), full_page=True)
+        (self.out_dir / f"{name}.html").write_text(self.page.content())
         return p
 
     def __exit__(self, *exc) -> None:
         try:
             if self._context is not None:
+                if self.evidence is not None:
+                    self.evidence.save()
                 self._context.tracing.stop(path=str(self.out_dir / "trace.zip"))
                 self._context.close()
         finally:

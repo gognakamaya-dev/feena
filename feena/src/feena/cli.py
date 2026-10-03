@@ -46,6 +46,8 @@ def simulate(config_path, url, scenario, wait):
     selected = [s for s in cfg.scenarios if scenario is None or s.name == scenario]
     if not selected:
         raise click.ClickException("No matching scenarios configured; add scenarios to feena.yaml.")
+    from .exports import write_browser_tests
+    write_browser_tests(selected, cfg.out_path / "tests")
     try:
         with _target(cfg, url, wait) as sandbox:
             results = run_simulations(selected, sandbox.base_url, cfg.out_path / "simulations")
@@ -120,7 +122,8 @@ def _scan(cfg: Config, sandbox: Sandbox, agents: list[str]):
     cfg.out_path.mkdir(parents=True, exist_ok=True)
     (cfg.out_path / "verification.json").write_text(json.dumps([
         {"fingerprint": f.fingerprint, "kind": f.kind.value,
-         "status": f.verification_status, "reason": f.verification_reason}
+         "status": f.verification_status, "reason": f.verification_reason,
+         "method": f.verification_method, "observed_by": f.observed_by}
         for f in findings
     ], indent=2) + "\n")
     return confirmed, len(dropped)
@@ -146,7 +149,8 @@ def run(config_path: str, only_agent: str | None, headed: bool, url: str | None,
             confirmed, dropped = _scan(cfg, sandbox, agents)
             outcomes = run_outcomes(cfg.outcomes, sandbox.base_url, cfg.users)
             simulations = _simulations(cfg, sandbox.base_url)
-            _emit(cfg, confirmed, dropped, agents, outcomes, simulations)
+            integrations = _integrations(cfg)
+            _emit(cfg, confirmed, dropped, agents, outcomes, simulations, integrations)
     except SandboxError as e:
         console.print(f"[red]Sandbox error:[/red] {e}")
         sys.exit(2)
@@ -163,7 +167,17 @@ def _run_agents(cfg, sandbox: Sandbox, agents: list[str], llm: LLM) -> list[Find
             agent_dir = out_root / "runs" / name
             with session(sandbox.base_url, agent_dir, headed=cfg.run.headed) as sess:
                 ctx = AgentContext(cfg=cfg, session=sess, llm=llm)
-                out.extend(EXPLORATORY[name](ctx).run())
+                found = EXPLORATORY[name](ctx).run()
+            for finding in found:
+                for key, filename in (("console", "console.json"), ("network", "network.json"),
+                                      ("trace", "trace.zip")):
+                    if (agent_dir / filename).is_file():
+                        finding.evidence[key] = str(agent_dir / filename)
+                if finding.evidence.get("screenshot"):
+                    dom = Path(finding.evidence["screenshot"]).with_suffix(".html")
+                    if dom.is_file():
+                        finding.evidence["dom"] = str(dom)
+            out.extend(found)
         else:
             console.print(f"[yellow]unknown agent '{name}', skipping[/yellow]")
     return out
@@ -177,11 +191,60 @@ def _make_replayer(cfg, sandbox: Sandbox):
 def _simulations(cfg, base_url):
     if not cfg.scenarios:
         return []
+    from .exports import write_browser_tests
     from .simulation import run_simulations
+    write_browser_tests(cfg.scenarios, cfg.out_path / "tests")
     return run_simulations(cfg.scenarios, base_url, cfg.out_path / "simulations")
 
 
-def _emit(cfg, confirmed: list[Finding], dropped_count: int, agents: list[str], outcomes=(), simulations=()) -> None:
+@main.command("export-simulation")
+@click.argument("manifest", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--out", default=".feena/tests", type=click.Path(path_type=Path))
+def export_simulation(manifest, out):
+    """Export a recorded journey/profile to standalone pytest + Playwright code."""
+    import json
+
+    from .exports import write_browser_tests
+    from .simulation_config import BrowserScenario, NetworkProfile
+    try:
+        data = json.loads(manifest.read_text())
+        if data.get("version") != 1:
+            raise ValueError("unsupported manifest version")
+        scenario = BrowserScenario.model_validate(data["scenario"])
+        scenario.profiles = [NetworkProfile.model_validate(data["profile"])]
+    except (ValueError, KeyError, TypeError) as exc:
+        raise click.ClickException("Invalid simulation manifest.") from exc
+    for path in write_browser_tests([scenario], out):
+        console.print(str(path), markup=False)
+
+
+def _integrations(cfg):
+    if not cfg.integrations:
+        return []
+    from .integrations import run_integrations, write_integration_tests
+    write_integration_tests(cfg.integrations, cfg.out_path / "tests")
+    return run_integrations(cfg.integrations, cfg.out_path / "integrations")
+
+
+@main.command()
+@click.option("--config", "config_path", default="feena.yaml")
+@click.option("--scenario", default=None)
+def integrate(config_path, scenario):
+    """Run configured service integrations; targets come from FEENA_SERVICE_<NAME>_URL."""
+    from .integrations import render_integrations
+    cfg = load_config(config_path)
+    cfg.integrations = [s for s in cfg.integrations if scenario is None or s.name == scenario]
+    if not cfg.integrations:
+        raise click.ClickException("No matching integration scenarios configured.")
+    results = _integrations(cfg)
+    body = render_integrations(results)
+    (cfg.out_path / "integration-report.md").write_text(body)
+    console.print(body, markup=False)
+    if any(r["status"] != "passed" for r in results):
+        sys.exit(1)
+
+
+def _emit(cfg, confirmed: list[Finding], dropped_count: int, agents: list[str], outcomes=(), simulations=(), integrations=()) -> None:
     report_path = write_report(confirmed, dropped_count, cfg.out_path, cfg.outcomes)
     body = render_markdown(confirmed, dropped_count)
     if outcomes:
@@ -189,6 +252,9 @@ def _emit(cfg, confirmed: list[Finding], dropped_count: int, agents: list[str], 
     if simulations:
         from .simulation import render_simulations
         body += "\n\n" + render_simulations(simulations)
+    if integrations:
+        from .integrations import render_integrations
+        body += "\n\n" + render_integrations(integrations)
     report_path.write_text(body)
     console.print(body, markup=False)
     console.print(f"\n[green]Report written:[/green] {report_path}")
@@ -211,7 +277,8 @@ def _emit(cfg, confirmed: list[Finding], dropped_count: int, agents: list[str], 
     from .findings import Severity
     if (any(f.severity in (Severity.HIGH, Severity.CRITICAL) for f in confirmed)
             or any(o.status != "passed" for o in outcomes)
-            or any(s.status != "passed" for s in simulations)):
+            or any(s.status != "passed" for s in simulations)
+            or any(i["status"] != "passed" for i in integrations)):
         sys.exit(1)
 
 
@@ -221,7 +288,7 @@ def _emit(cfg, confirmed: list[Finding], dropped_count: int, agents: list[str], 
 @click.option("--out", "out_dir", default="./.feena", help="Where to write the report.")
 def bench(targets_path: str, only: str | None, out_dir: str) -> None:
     """Run the hostile agent across many sandboxed apps and aggregate the results."""
-    from .bench import load_targets, run_bench, render_bench_md, write_bench
+    from .bench import load_targets, render_bench_md, run_bench, write_bench
     targets = load_targets(targets_path)
     console.print(f"[bold]Feena benchmark[/bold] · {len(targets)} target(s)"
                   + (f" · only {only}" if only else ""))
@@ -286,6 +353,7 @@ def ci(url, config_path, tests_dir, baseline_path, fail_on, wait, comment, only_
             report_path = write_report(confirmed, dropped, cfg.out_path, cfg.outcomes)
             outcomes = run_outcomes(cfg.outcomes, sandbox.base_url, cfg.users)
             simulations = _simulations(cfg, sandbox.base_url)
+            integrations = _integrations(cfg)
             baseline = ci_mod.load_baseline(Path(baseline_path))
             new, known, fixed = ci_mod.split_by_baseline(confirmed, baseline)
             regression = ci_mod.run_regression(Path(tests_dir), sandbox.base_url, cfg.users)
@@ -301,6 +369,9 @@ def ci(url, config_path, tests_dir, baseline_path, fail_on, wait, comment, only_
     if any(s.status != "passed" for s in simulations):
         verdict.failed = True
         verdict.reasons.append("browser simulations failed or were inconclusive")
+    if any(i["status"] != "passed" for i in integrations):
+        verdict.failed = True
+        verdict.reasons.append("service integrations failed or were inconclusive")
     body = ci_mod.render_comment(new, known, fixed, regression, verdict, dropped,
                                  fail_on, has_baseline=bool(baseline))
     if outcomes:
@@ -310,6 +381,11 @@ def ci(url, config_path, tests_dir, baseline_path, fail_on, wait, comment, only_
     if simulations:
         from .simulation import render_simulations
         summary = "\n\n" + render_simulations(simulations)
+        body += summary
+        report_path.write_text(report_path.read_text() + summary)
+    if integrations:
+        from .integrations import render_integrations
+        summary = "\n\n" + render_integrations(integrations)
         body += summary
         report_path.write_text(report_path.read_text() + summary)
     (cfg.out_path / "comment.md").write_text(body)
@@ -372,10 +448,9 @@ def adopt(fingerprints, adopt_all, src, dest) -> None:
         console.print(f"[red]Unknown fingerprint(s): {', '.join(missing)}[/red]")
         sys.exit(2)
     destp.mkdir(parents=True, exist_ok=True)
-    for support in ("_feena_support.py", "conftest.py"):
-        shutil.copy(srcp / support, destp / support)
-    if (srcp / "_feena_outcomes.py").exists():
-        shutil.copy(srcp / "_feena_outcomes.py", destp / "_feena_outcomes.py")
+    for support in [*srcp.glob("_feena_*.py"), srcp / "conftest.py"]:
+        if support.is_file():
+            shutil.copy(support, destp / support.name)
     for w in wanted:
         shutil.copy(available[w], destp / available[w].name)
     console.print(f"Adopted {len(wanted)} test(s) into {destp}. Commit them. Each passes while "
@@ -398,6 +473,7 @@ def keygen(out: str) -> None:
 def verify(attestation: str, pub: str) -> None:
     """Verify a signed attestation has not been altered."""
     import json
+
     from .attest import verify as _verify
     att = json.loads(Path(attestation).read_text())
     if _verify(att, Path(pub)):
@@ -432,6 +508,7 @@ def corpus_stats(config_path: str) -> None:
 def corpus_upload(config_path: str) -> None:
     """Explicitly send anonymised records to the configured endpoint."""
     import os
+
     from .corpus import upload
     cfg = load_config(config_path)
     if not cfg.corpus.endpoint:
