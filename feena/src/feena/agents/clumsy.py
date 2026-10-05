@@ -22,21 +22,6 @@ class ClumsyAgent(BaseAgent):
     )
     goal = "Stress the app's forms and flows the way a careless real user would."
 
-    def act(self, decision) -> None:
-        page = self.ctx.session.page
-        assert page is not None
-        # Add a little chaos on top of the model's chosen action: on a click, occasionally
-        # double-click to probe for double-submit handling.
-        if decision.action == "click" and decision.reason and "double" in decision.reason.lower():
-            try:
-                page.dblclick(decision.target, timeout=3000)
-                self.ctx.history.append(f"double-clicked {decision.target}")
-                return
-            except Exception as e:  # noqa: BLE001
-                self.ctx.history.append(f"double-click failed: {e}")
-                return
-        super().act(decision)
-
     def evaluate(self, decision) -> None:
         page = self.ctx.session.page
         assert page is not None
@@ -59,3 +44,4 @@ class ClumsyAgent(BaseAgent):
                     evidence={"screenshot": str(shot), "url": page.url},
                 )
             )
+

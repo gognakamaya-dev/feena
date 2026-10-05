@@ -392,3 +392,28 @@ the first supported stack (Next.js + Postgres).
 
 Apache-2.0 (intended). The runner is free and open source; hosted runs and support are the
 business.
+
+
+
+## Exploratory browser observations and actions
+
+The regular and clumsy agents now receive the current URL, a bounded ARIA snapshot
+(with visible-text fallback), recent console/page errors, and a screenshot at each decision.
+Screenshots and page content are sent to the configured model provider; use disposable test
+accounts and keep traces, screenshots, and output directories private.
+
+Actions prefer an exact accessible role/name pair, with a selector fallback. Click, explicit
+double-click, fill, key press, back, and same-origin direct navigation use bounded Playwright
+waits. An uncertain action is never automatically repeated: its outcome is returned to the
+agent with a warning that side effects may already have happened. Direct navigation checks
+are not a network isolation boundary; continue using the existing sandbox.
+
+`agent-actions.jsonl` records action outcomes and screenshot paths. It omits fill values and
+model reasoning, but selectors, accessible names, URLs, screenshots, and traces can still
+contain sensitive data. This diagnostic log is not an independently replayable test: starting
+data and explicit outcome assertions remain necessary. Model `done` means exploration ended,
+not that a user goal or backend invariant passed. Existing verification still governs findings.
+
+This change improves the existing exploratory loop. Autonomous journey approval, database
+isolation for concurrent exploratory agents, and automatic backend success checks are separate
+work; the configured scenario/campaign APIs remain the path for explicit backend assertions.
