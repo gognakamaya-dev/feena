@@ -114,6 +114,9 @@ def _scan(cfg: Config, sandbox: Sandbox, agents: list[str]):
     if not llm.available and any(a in EXPLORATORY for a in agents):
         console.print("[yellow]No ANTHROPIC_API_KEY: exploratory agents will no-op. "
                       "Hostile checks still run.[/yellow]")
+    cfg.out_path.mkdir(parents=True, exist_ok=True)
+    for name in ("exploration.json", "candidates.json"):
+        (cfg.out_path / name).unlink(missing_ok=True)
     findings = dedup(_run_agents(cfg, sandbox, agents, llm))
     confirmed, dropped = confirm(findings, _make_replayer(cfg, sandbox))
     import json
@@ -123,6 +126,8 @@ def _scan(cfg: Config, sandbox: Sandbox, agents: list[str]):
          "status": f.verification_status, "reason": f.verification_reason}
         for f in findings
     ], indent=2) + "\n")
+    from dataclasses import asdict
+    (cfg.out_path / "candidates.json").write_text(json.dumps([asdict(f) for f in dropped], indent=2))
     return confirmed, len(dropped)
 
 
@@ -155,6 +160,7 @@ def run(config_path: str, only_agent: str | None, headed: bool, url: str | None,
 def _run_agents(cfg, sandbox: Sandbox, agents: list[str], llm: LLM) -> list[Finding]:
     out: list[Finding] = []
     out_root = cfg.out_path
+    summaries = []
     for name in agents:
         console.print(f"→ running [cyan]{name}[/cyan]")
         if name == "hostile":
@@ -171,12 +177,56 @@ def _run_agents(cfg, sandbox: Sandbox, agents: list[str], llm: LLM) -> list[Find
                 if not 200 <= response.status_code < 300:
                     raise SandboxError("Test data reset failed; exploratory agent was not started")
             agent_dir = out_root / "runs" / name / uuid.uuid4().hex
-            with session(sandbox.base_url, agent_dir, headed=cfg.run.headed) as sess:
-                ctx = AgentContext(cfg=cfg, session=sess, llm=llm)
-                out.extend(EXPLORATORY[name](ctx).run())
+            summary = {"agent": name, "status": "blocked", "steps": 0,
+                       "action_errors": 0, "goal_verified": False}
+            try:
+                if not llm.available:
+                    summary.update(status="model_unavailable", reason="No model configured")
+                else:
+                    with session(sandbox.base_url, agent_dir, headed=cfg.run.headed) as sess:
+                        ctx = AgentContext(cfg=cfg, session=sess, llm=llm)
+                        agent = EXPLORATORY[name](ctx)
+                        out.extend(agent.run())
+                        summary = agent.summary
+            except KeyboardInterrupt:
+                summary.update(status="cancelled", reason="Operator interrupted exploration")
+                raise
+            except Exception as error:
+                summary.update(status="blocked", reason="Browser/session failure: " + type(error).__name__)
+            finally:
+                agent_dir.mkdir(parents=True, exist_ok=True)
+                (agent_dir / "run-summary.json").write_text(__import__("json").dumps(summary, indent=2))
+                summaries.append({**summary, "evidence_dir": str(agent_dir)})
+                (out_root / "exploration.json").write_text(__import__("json").dumps(summaries, indent=2))
         else:
             console.print(f"[yellow]unknown agent '{name}', skipping[/yellow]")
     return out
+
+
+def _exploration_incomplete(cfg):
+    import json
+    path = cfg.out_path / "exploration.json"
+    runs = json.loads(path.read_text()) if path.exists() else []
+    return any(r["status"] != "completed_unverified" for r in runs)
+
+
+def _exploration_report(cfg):
+    import json
+    path = cfg.out_path / "exploration.json"
+    runs = json.loads(path.read_text()) if path.exists() else []
+    candidates_path = cfg.out_path / "candidates.json"
+    candidates = json.loads(candidates_path.read_text()) if candidates_path.exists() else []
+    lines = []
+    if runs:
+        lines = ["", "", "### Exploration coverage", "", "Exploration does not verify goal success. Explicit outcome/scenario assertions report that separately."]
+        for run in runs:
+            lines.append(f"- {run['agent']}: {run['status']} — {run['steps']} actions; {run['action_errors']} uncertain actions. {run.get('reason', '')}. Evidence: `{run['evidence_dir']}`")
+    if candidates:
+        lines += ["", "### Candidates requiring investigation", ""]
+        for finding in candidates:
+            lines.append(f"- `{finding['verification_status']}`: {finding['title']} — {finding['verification_reason']}")
+        lines.append("Full descriptions, recorded steps, and evidence references are retained in `candidates.json`. These are not confirmed bugs.")
+    return "\n".join(lines)
 
 
 def _make_replayer(cfg, sandbox: Sandbox):
@@ -193,7 +243,7 @@ def _simulations(cfg, base_url):
 
 def _emit(cfg, confirmed: list[Finding], dropped_count: int, agents: list[str], outcomes=(), simulations=()) -> None:
     report_path = write_report(confirmed, dropped_count, cfg.out_path, cfg.outcomes)
-    body = render_markdown(confirmed, dropped_count)
+    body = render_markdown(confirmed, dropped_count) + _exploration_report(cfg)
     if outcomes:
         body += "\n\n" + render_outcomes(outcomes)
     if simulations:
@@ -219,7 +269,7 @@ def _emit(cfg, confirmed: list[Finding], dropped_count: int, agents: list[str], 
         console.print(f"Corpus: anonymised records appended to {path} (not uploaded).")
     # Non-zero exit on any HIGH/CRITICAL so a PR check can gate on it.
     from .findings import Severity
-    if (any(f.severity in (Severity.HIGH, Severity.CRITICAL) for f in confirmed)
+    if (_exploration_incomplete(cfg) or any(f.severity in (Severity.HIGH, Severity.CRITICAL) for f in confirmed)
             or any(o.status != "passed" for o in outcomes)
             or any(s.status != "passed" for s in simulations)):
         sys.exit(1)
@@ -304,6 +354,9 @@ def ci(url, config_path, tests_dir, baseline_path, fail_on, wait, comment, only_
         sys.exit(2)
 
     verdict = ci_mod.decide(new, regression, fail_on)
+    if _exploration_incomplete(cfg):
+        verdict.failed = True
+        verdict.reasons.append("Exploration was incomplete or inconclusive")
     unsuccessful = sum(o.status != "passed" for o in outcomes)
     if unsuccessful:
         verdict.failed = True
@@ -322,6 +375,9 @@ def ci(url, config_path, tests_dir, baseline_path, fail_on, wait, comment, only_
         summary = "\n\n" + render_simulations(simulations)
         body += summary
         report_path.write_text(report_path.read_text() + summary)
+    exploration = _exploration_report(cfg)
+    body += exploration
+    report_path.write_text(report_path.read_text() + exploration)
     (cfg.out_path / "comment.md").write_text(body)
     ci_mod.write_step_summary(body)
     if comment:
@@ -488,4 +544,5 @@ def approve_journey(proposal, sha256, out):
 
 if __name__ == "__main__":
     main()
+
 

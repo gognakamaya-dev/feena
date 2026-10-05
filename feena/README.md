@@ -454,3 +454,24 @@ setup notes and the approved digest as comments. The digest detects edits after 
 not an identity/authentication system. Browser simulation still produces the existing manifest,
 trace, UI/backend assertions and replay artifacts. Approval is not evidence the proposal is
 correct: investigate failed/inconclusive results before attributing a bug to the app.
+
+
+### Exploration status and unverified candidates
+
+Each exploratory run writes `run-summary.json`; the scan aggregates current runs into
+`exploration.json`. `completed_unverified` means the agent stopped normally, not that its
+goal passed. `model_error`, `model_unavailable`, `blocked`, `budget_exhausted`, `inconclusive`,
+and `cancelled` distinguish incomplete execution. Attempted exploratory runs that remain
+incomplete cause `run`/`ci` to fail independently of the finding severity threshold.
+Explicit configured outcomes and browser assertions still determine user-goal success.
+
+Agent `note_finding` decisions now produce unverified candidates. The scan retains dropped
+candidates in `candidates.json` with descriptions, expected/observed outcomes where supplied,
+action history, evidence references and verification reasons. Reports show these separately
+from confirmed bugs. Model-generated descriptions and expectations are hypotheses, not proof.
+
+Input values are omitted from recorded exploratory steps; they must be restored from test
+fixtures before replay. Candidate metadata explicitly indicates that replay requires review
+and test inputs. These changes preserve investigation evidence but do not automatically
+convert arbitrary exploratory behavior into a supported executable reproduction. Use the
+reviewed journey proposal/configuration flow for explicit UI/backend assertions and replay.
