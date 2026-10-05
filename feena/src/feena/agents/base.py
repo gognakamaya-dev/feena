@@ -31,6 +31,7 @@ class BaseAgent:
 
     def __init__(self, ctx: AgentContext):
         self.ctx = ctx
+        self.goal = getattr(ctx.cfg.run, "goals", {}).get(self.name, self.goal)
 
     def run(self) -> list[Finding]:
         """Default: LLM-driven exploration under a time and step budget."""
@@ -42,6 +43,8 @@ class BaseAgent:
             if time.monotonic() > deadline:
                 break
             snapshot = self.ctx.session.snapshot()
+            self.ctx.session.out_dir.mkdir(parents=True, exist_ok=True)
+            (self.ctx.session.out_dir / f"observation-{_:04d}.txt").write_text(snapshot)
             try:
                 screenshot = self.ctx.session.screenshot(f"observation-{_:04d}")
             except Exception:

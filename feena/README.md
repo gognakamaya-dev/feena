@@ -414,6 +414,43 @@ contain sensitive data. This diagnostic log is not an independently replayable t
 data and explicit outcome assertions remain necessary. Model `done` means exploration ended,
 not that a user goal or backend invariant passed. Existing verification still governs findings.
 
-This change improves the existing exploratory loop. Autonomous journey approval, database
-isolation for concurrent exploratory agents, and automatic backend success checks are separate
-work; the configured scenario/campaign APIs remain the path for explicit backend assertions.
+The exploratory loop does not infer verified backend success from screenshots. Reviewed
+journey proposals below use the configured scenario runner for explicit backend assertions.
+
+
+### Goal-driven exploration and reviewed journey proposals
+
+Set `run.goals.regular` or `run.goals.clumsy` to a specific task. Each exploratory run
+gets a fresh browser context and a unique evidence directory under `runs/<agent>/<run-id>`.
+An optional `run.reset_path: /test/reset` sends a same-origin POST before each exploratory
+agent. The endpoint must synchronously restore disposable starting data and return 2xx;
+redirects, network errors, and other responses stop execution. Runs are sequential: this
+reset hook does not make a shared database safe for parallel agents or other active users.
+Use dedicated disposable backends for independent campaigns, as documented in DEPLOY.md.
+
+Agents save `observation-0000.txt` alongside screenshots. Propose a test from an observation:
+
+```bash
+feena propose-journey --goal "Retry checkout without duplicate orders" \
+  --observation path/to/observation-0000.txt --out checkout-proposal.json
+```
+
+The model generates a schema-validated draft with steps, a visible UI assertion, a backend
+JSON invariant, setup instructions, and assumptions. It does not navigate, execute the draft,
+or add it to a workspace. Model-inferred selectors, routes, and values need review against
+an app you control. Saved observations are sent to your configured model provider.
+
+Review/edit the proposal and calculate its SHA-256 (`sha256sum checkout-proposal.json`).
+Then explicitly export that exact version:
+
+```bash
+feena approve-journey checkout-proposal.json --sha256 REVIEWED_SHA256 --out checkout-approved.yaml
+# Restore the starting data described in the file before running against your disposable app:
+feena simulate --config checkout-approved.yaml --url http://localhost:5055
+```
+
+Neither proposal nor approval overwrites existing files or executes tests. The export retains
+setup notes and the approved digest as comments. The digest detects edits after review; it is
+not an identity/authentication system. Browser simulation still produces the existing manifest,
+trace, UI/backend assertions and replay artifacts. Approval is not evidence the proposal is
+correct: investigate failed/inconclusive results before attributing a bug to the app.

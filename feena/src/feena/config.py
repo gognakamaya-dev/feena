@@ -32,8 +32,16 @@ class ScopeConfig(BaseModel):
 
 class RunConfig(BaseModel):
     agents: list[str] = Field(default_factory=lambda: ["regular", "clumsy", "hostile"])
-    budget_seconds: int = 300
-    max_steps: int = 40
+    budget_seconds: int = Field(default=300, ge=1, le=3600)
+    max_steps: int = Field(default=40, ge=1, le=1000)
+    goals: dict[str, str] = Field(default_factory=dict)
+    reset_path: str | None = None
+
+    @field_validator("reset_path")
+    @classmethod
+    def validate_reset(cls, value):
+        from .simulation_config import local_path
+        return local_path(value) if value is not None else None
     headed: bool = False
 
 
@@ -130,3 +138,4 @@ def load_config(path: str | Path) -> Config:
     cfg = Config(**data)
     cfg.root = path.parent
     return cfg
+
