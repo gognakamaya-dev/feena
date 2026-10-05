@@ -160,7 +160,17 @@ def _run_agents(cfg, sandbox: Sandbox, agents: list[str], llm: LLM) -> list[Find
         if name == "hostile":
             out.extend(HostileAgent(cfg, sandbox).run())
         elif name in EXPLORATORY:
-            agent_dir = out_root / "runs" / name
+            import uuid
+            if cfg.run.reset_path:
+                import httpx
+                try:
+                    response = httpx.post(sandbox.base_url + cfg.run.reset_path,
+                                          timeout=10, follow_redirects=False)
+                except httpx.HTTPError as error:
+                    raise SandboxError("Test data reset unavailable; exploratory agent was not started") from error
+                if not 200 <= response.status_code < 300:
+                    raise SandboxError("Test data reset failed; exploratory agent was not started")
+            agent_dir = out_root / "runs" / name / uuid.uuid4().hex
             with session(sandbox.base_url, agent_dir, headed=cfg.run.headed) as sess:
                 ctx = AgentContext(cfg=cfg, session=sess, llm=llm)
                 out.extend(EXPLORATORY[name](ctx).run())
@@ -441,5 +451,41 @@ def corpus_upload(config_path: str) -> None:
     console.print(f"Uploaded {n} anonymised record(s).")
 
 
+@main.command("propose-journey")
+@click.option("--goal", required=True, help="The user outcome to test.")
+@click.option("--observation", type=click.Path(exists=True, dir_okay=False, path_type=Path), required=True)
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path), required=True)
+def propose_journey(goal, observation, out):
+    """Draft a journey from a saved observation, without visiting or changing an app."""
+    from .journeys import save_proposal
+    try:
+        if out.exists():
+            raise ValueError("Output already exists; choose a new proposal file")
+        if observation.stat().st_size > 100000:
+            raise ValueError("Observation must be at most 100 KB")
+        proposal = LLM().propose(goal, observation.read_text())
+        digest = save_proposal(proposal, out)
+    except Exception as error:
+        raise click.ClickException(f"Proposal not saved: {type(error).__name__}") from error
+    console.print(f"Proposal: {out}. Review setup, assumptions, selectors and expected values.", markup=False)
+    console.print(f"SHA-256: {digest}", markup=False)
+    console.print("No tests were run. Approve the reviewed file with approve-journey.")
+
+
+@main.command("approve-journey")
+@click.argument("proposal", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--sha256", required=True, help="SHA-256 of the exact proposal you reviewed.")
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path), required=True)
+def approve_journey(proposal, sha256, out):
+    """Export a reviewed proposal as a separate scenario config. Does not run it."""
+    from .journeys import approve_proposal
+    try:
+        approve_proposal(proposal, sha256, out)
+    except Exception as error:
+        raise click.ClickException(str(error)) from error
+    console.print(f"Approved config: {out}. Restore its documented starting data before simulation.", markup=False)
+
+
 if __name__ == "__main__":
     main()
+
