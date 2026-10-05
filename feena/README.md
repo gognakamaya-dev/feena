@@ -296,7 +296,8 @@ application code or every networking mechanism.
 ## MCP server (single-workspace preview)
 
 Install `pip install -e '.[mcp]'` and `playwright install chromium`. The MCP service exposes
-`list_scenarios`, `start_run`, `get_run`, and `cancel_run` using the official Python MCP SDK.
+`list_scenarios`, `start_run`, `get_run`, `cancel_run`, `start_campaign`, `get_campaign`, and
+`cancel_campaign` using the official Python MCP SDK.
 Runs execute asynchronously in separate worker processes; poll `get_run` until completed,
 cancelled, timed_out, or error. A completed run can contain failed or inconclusive profiles.
 
@@ -334,12 +335,21 @@ Put the service behind HTTPS. Connect to `https://mcp.your-domain.example/mcp` w
 is public and reveals only service availability. This is static bearer authentication,
 **not OAuth**, so OAuth-only MCP clients are not supported yet.
 
-The service currently permits one active run, a 120-second execution budget, and 100 runs
-per process lifetime. Cancellation kills the worker/browser process group but cannot undo
-application writes. Results are in memory until restart; evidence remains under `.feena/mcp`
-until the operator deletes it. Keep that directory private and apply a disk/retention policy.
-Raw traces/screenshots are not returned over MCP. The same bearer token grants access to all
-runs: this is **single-workspace**, not multi-tenant production hosting.
+The hosted service uses a durable SQLite campaign queue shared by the campaign and legacy
+run APIs. Configure 1–16 isolated worker targets, with one active browser job per slot, a
+120-second budget per job, up to 100 jobs per campaign, and 1,000 jobs per store. Results and
+queued scenario snapshots survive restarts. Interrupted active work requires operator cleanup
+and explicit recovery; see [DEPLOY.md](DEPLOY.md) before restarting an interrupted service.
+
+Campaigns report `completed` only when all assertions pass; `failed` indicates an assertion
+failure and `inconclusive` indicates execution uncertainty. The legacy run API retains its
+execution-oriented `completed` status, so inspect its individual `results` as well.
+Cancellation kills the worker/browser process group but cannot undo application writes.
+Evidence remains under `.feena/mcp` until the operator deletes it. Keep that directory private
+and apply a disk/retention policy. Raw traces/screenshots are not returned over MCP. The same
+bearer token grants access to all runs: this is **single-workspace**, not multi-tenant
+production hosting. Optional `FEENA_WORKSPACE_NAME` and `FEENA_ENVIRONMENT_NAME` display labels
+help users confirm their workspace after key verification; never put secrets in these labels.
 
 `scripts/serve_mcp_demo.py` starts the checkout fixture and HTTP MCP service for a managed
 preview. Its generated token is stored locally at `.feena/mcp-token` with mode 0600 and is
@@ -382,3 +392,65 @@ the first supported stack (Next.js + Postgres).
 
 Apache-2.0 (intended). The runner is free and open source; hosted runs and support are the
 business.
+
+
+
+## Exploratory browser observations and actions
+
+The regular and clumsy agents now receive the current URL, a bounded ARIA snapshot
+(with visible-text fallback), recent console/page errors, and a screenshot at each decision.
+Screenshots and page content are sent to the configured model provider; use disposable test
+accounts and keep traces, screenshots, and output directories private.
+
+Actions prefer an exact accessible role/name pair, with a selector fallback. Click, explicit
+double-click, fill, key press, back, and same-origin direct navigation use bounded Playwright
+waits. An uncertain action is never automatically repeated: its outcome is returned to the
+agent with a warning that side effects may already have happened. Direct navigation checks
+are not a network isolation boundary; continue using the existing sandbox.
+
+`agent-actions.jsonl` records action outcomes and screenshot paths. It omits fill values and
+model reasoning, but selectors, accessible names, URLs, screenshots, and traces can still
+contain sensitive data. This diagnostic log is not an independently replayable test: starting
+data and explicit outcome assertions remain necessary. Model `done` means exploration ended,
+not that a user goal or backend invariant passed. Existing verification still governs findings.
+
+The exploratory loop does not infer verified backend success from screenshots. Reviewed
+journey proposals below use the configured scenario runner for explicit backend assertions.
+
+
+### Goal-driven exploration and reviewed journey proposals
+
+Set `run.goals.regular` or `run.goals.clumsy` to a specific task. Each exploratory run
+gets a fresh browser context and a unique evidence directory under `runs/<agent>/<run-id>`.
+An optional `run.reset_path: /test/reset` sends a same-origin POST before each exploratory
+agent. The endpoint must synchronously restore disposable starting data and return 2xx;
+redirects, network errors, and other responses stop execution. Runs are sequential: this
+reset hook does not make a shared database safe for parallel agents or other active users.
+Use dedicated disposable backends for independent campaigns, as documented in DEPLOY.md.
+
+Agents save `observation-0000.txt` alongside screenshots. Propose a test from an observation:
+
+```bash
+feena propose-journey --goal "Retry checkout without duplicate orders" \
+  --observation path/to/observation-0000.txt --out checkout-proposal.json
+```
+
+The model generates a schema-validated draft with steps, a visible UI assertion, a backend
+JSON invariant, setup instructions, and assumptions. It does not navigate, execute the draft,
+or add it to a workspace. Model-inferred selectors, routes, and values need review against
+an app you control. Saved observations are sent to your configured model provider.
+
+Review/edit the proposal and calculate its SHA-256 (`sha256sum checkout-proposal.json`).
+Then explicitly export that exact version:
+
+```bash
+feena approve-journey checkout-proposal.json --sha256 REVIEWED_SHA256 --out checkout-approved.yaml
+# Restore the starting data described in the file before running against your disposable app:
+feena simulate --config checkout-approved.yaml --url http://localhost:5055
+```
+
+Neither proposal nor approval overwrites existing files or executes tests. The export retains
+setup notes and the approved digest as comments. The digest detects edits after review; it is
+not an identity/authentication system. Browser simulation still produces the existing manifest,
+trace, UI/backend assertions and replay artifacts. Approval is not evidence the proposal is
+correct: investigate failed/inconclusive results before attributing a bug to the app.

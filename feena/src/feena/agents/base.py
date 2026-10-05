@@ -6,6 +6,7 @@ hostile agent does not use the LLM loop for its checks; it subclasses to reuse s
 from __future__ import annotations
 
 import time
+import json
 from dataclasses import dataclass, field
 
 from ..browser import Session
@@ -30,40 +31,51 @@ class BaseAgent:
 
     def __init__(self, ctx: AgentContext):
         self.ctx = ctx
+        self.goal = getattr(ctx.cfg.run, "goals", {}).get(self.name, self.goal)
 
     def run(self) -> list[Finding]:
         """Default: LLM-driven exploration under a time and step budget."""
         cfg = self.ctx.cfg.run
-        deadline = time.time() + cfg.budget_seconds
+        deadline = time.monotonic() + cfg.budget_seconds
         self.ctx.session.goto("/")
 
         for _ in range(cfg.max_steps):
-            if time.time() > deadline:
+            if time.monotonic() > deadline:
                 break
             snapshot = self.ctx.session.snapshot()
-            decision = self.ctx.llm.decide(self.system, self.goal, snapshot, self.ctx.history)
+            self.ctx.session.out_dir.mkdir(parents=True, exist_ok=True)
+            (self.ctx.session.out_dir / f"observation-{_:04d}.txt").write_text(snapshot)
+            try:
+                screenshot = self.ctx.session.screenshot(f"observation-{_:04d}")
+            except Exception:
+                screenshot = None
+                self.ctx.history.append("Screenshot unavailable; using text observation")
+            try:
+                decision = self.ctx.llm.decide(self.system, self.goal, snapshot, self.ctx.history,
+                                               screenshot=screenshot)
+            except Exception as error:
+                self.ctx.history.append(f"Model decision unavailable: {type(error).__name__}")
+                break
             self.ctx.history.append(f"{decision.action} {decision.target} :: {decision.reason}")
 
             if decision.action == "done":
                 break
+            if time.monotonic() >= deadline:
+                break
+            self.action_timeout_ms = min(3000, max(1, int((deadline - time.monotonic()) * 1000)))
             self.act(decision)
-            self.evaluate(decision)
+            try:
+                self.evaluate(decision)
+            except Exception as error:
+                self.ctx.history.append(f"Evaluation unavailable: {type(error).__name__}; not a confirmed finding")
 
         return self.ctx.findings
 
     def act(self, decision) -> None:
-        page = self.ctx.session.page
-        assert page is not None
-        try:
-            if decision.action == "goto":
-                self.ctx.session.goto(decision.target or "/")
-            elif decision.action == "click":
-                page.click(decision.target, timeout=3000)
-            elif decision.action == "fill":
-                page.fill(decision.target, decision.value, timeout=3000)
-        except Exception as e:  # noqa: BLE001 - a failed action is signal, not a crash
-            self.ctx.history.append(f"action failed: {e}")
+        result = self.ctx.session.perform(decision, getattr(self, "action_timeout_ms", 3000))
+        self.ctx.history.append("Action outcome: " + json.dumps(result))
 
     def evaluate(self, decision) -> None:
         """Hook for subclasses to turn observations into findings. Base does nothing."""
         return None
+
