@@ -92,6 +92,21 @@ class Campaigns:
         if any(name not in configured for name in scenarios):
             raise ValueError("Unknown configured scenario")
         selected = [configured[name] for name in scenarios]
+        return await self.enqueue(selected)
+
+    async def enqueue(self, selected, *, provenance=None, request_id=None):
+        """Internal queue entry point. Remote clients must use the reviewed workflow."""
+        if self._closed:
+            raise ValueError("Campaign service is closed")
+        if not selected:
+            raise ValueError("Select at least one scenario")
+        self.db.execute("CREATE TABLE IF NOT EXISTS workflow_runs (campaign TEXT PRIMARY KEY, request_id TEXT UNIQUE, provenance TEXT NOT NULL)")
+        if request_id:
+            previous = self.db.execute("SELECT campaign,provenance FROM workflow_runs WHERE request_id=?", (request_id,)).fetchone()
+            if previous:
+                if json.loads(previous["provenance"]) != provenance:
+                    raise ValueError("Request ID already used for another run")
+                return self.get(previous["campaign"])
         count = sum(len(s.profiles) for s in selected)
         if count > self.MAX_CAMPAIGN_JOBS:
             raise ValueError("Campaign exceeds 100 scenario/profile jobs")
@@ -100,6 +115,9 @@ class Campaigns:
         campaign_id = uuid.uuid4().hex
         with self.db:
             self.db.execute("INSERT INTO campaigns(id) VALUES (?)", (campaign_id,))
+            if provenance is not None:
+                self.db.execute("INSERT INTO workflow_runs VALUES(?,?,?)",
+                                (campaign_id, request_id, json.dumps(provenance, sort_keys=True)))
             for scenario in selected:
                 for profile in scenario.profiles:
                     snapshot = scenario.model_copy(update={"profiles": [profile]}).model_dump_json()
@@ -224,3 +242,4 @@ class Campaigns:
         await asyncio.gather(*self.tasks.values(), return_exceptions=True)
         self.db.close()
         self._lock.close()
+

@@ -542,7 +542,40 @@ def approve_journey(proposal, sha256, out):
     console.print(f"Approved config: {out}. Restore its documented starting data before simulation.", markup=False)
 
 
+@main.command("workflow-ci")
+@click.option("--endpoint", required=True, help="Stable HTTPS Feena workspace URL.")
+@click.option("--journey", required=True, help="Approved workspace journey ID.")
+@click.option("--version", required=True, help="Exact approved version digest.")
+@click.option("--request-id", required=True, help="Unique CI attempt ID; reuse only for transport retries.")
+@click.option("--timeout", default=300, type=click.IntRange(1, 3600))
+@click.option("--report-only", is_flag=True, help="Report failed assertions without failing the job.")
+@click.option("--comment/--no-comment", default=False, help="Update the existing Feena PR comment.")
+def workflow_ci(endpoint, journey, version, request_id, timeout, report_only, comment):
+    """Run an approved hosted journey and link its authenticated results in CI."""
+    import os
+    from .workflow_ci import run_reviewed, summary
+    from . import ci as ci_mod
+    try:
+        result = run_reviewed(endpoint, os.environ.get("FEENA_WORKSPACE_KEY", ""),
+                              journey, version, request_id, timeout)
+    except Exception as error:
+        raise click.ClickException("Workspace request failed: " + type(error).__name__ +
+                                   ". Check readiness/approval. Reuse the same request ID after a lost response.") from error
+    body = summary(result)
+    ci_mod.write_outputs(0, 0, result["ci_status"] != "completed")
+    output = Path(".feena")
+    output.mkdir(exist_ok=True)
+    (output / "report.md").write_text(body)
+    ci_mod.write_step_summary(body)
+    if comment:
+        ci_mod.upsert_pr_comment(body)
+    console.print(body, markup=False)
+    if result['ci_status'] != 'completed' and not report_only:
+        raise click.exceptions.Exit(1)
+
+
 if __name__ == "__main__":
     main()
+
 
 

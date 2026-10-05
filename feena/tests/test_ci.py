@@ -241,9 +241,10 @@ def test_step_summary_and_outputs_are_written(tmp_path, monkeypatch):
 ACTION = yaml.safe_load((ROOT / "action.yml").read_text())
 
 
-def test_action_is_a_composite_with_a_required_url_and_shells():
+def test_action_is_a_composite_with_local_or_hosted_target_and_shells():
     assert ACTION["runs"]["using"] == "composite"
-    assert ACTION["inputs"]["url"]["required"] is True
+    assert ACTION["inputs"]["url"]["required"] is False
+    assert "workspace-url" in ACTION["inputs"]
     for step in ACTION["runs"]["steps"]:
         if "run" in step:
             assert step.get("shell") == "bash", step
@@ -266,12 +267,14 @@ def test_action_outputs_come_from_the_feena_step_and_report_uploads_always():
 
 
 def test_action_only_calls_cli_flags_that_exist():
-    help_text = subprocess.run([sys.executable, "-m", "feena.cli", "ci", "--help"],
-                               capture_output=True, text=True).stdout
     run_step = next(s for s in ACTION["runs"]["steps"] if s.get("id") == "feena")["run"]
     import re
-    for flag in set(re.findall(r"--[a-z][a-z-]+", run_step)):
-        assert flag in help_text, f"action uses {flag} which `feena ci` does not accept"
+    hosted, local = run_step.split('\nfi\n', 1)
+    for command, script in [("workflow-ci", hosted), ("ci", local)]:
+        help_text = subprocess.run([sys.executable, "-m", "feena.cli", command, "--help"],
+                                  capture_output=True, text=True).stdout
+        for flag in set(re.findall(r"--[a-z][a-z-]+", script)):
+            assert flag in help_text, f"action uses {flag} which {command} does not accept"
 
 
 def test_example_and_selftest_workflows_are_valid_and_reference_real_paths():
@@ -368,3 +371,4 @@ def test_ci_end_to_end_baseline_adopt_and_single_regression(tmp_path, gh):
     assert "IDOR" in body and "is back" in body and "feena baseline" not in body
     assert len(gh.comments) == 1                                # one comment, updated all along
     assert gh.calls.count("POST") == 1 and gh.calls.count("PATCH") >= 3
+

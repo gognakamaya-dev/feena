@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+import os
 from collections import defaultdict
 
 from flask import Flask, jsonify, make_response, request
@@ -87,6 +88,15 @@ def state():
     return jsonify(orders=len(ORDERS.get(_session_key(), {})))
 
 
+@app.post("/test/reset")
+def reset_test_data():
+    # Only opt in on a disposable demo instance dedicated to this worker slot.
+    if os.environ.get("FEENA_DEMO_RESET") != "1":
+        return jsonify(error="Not found"), 404
+    ORDERS.clear()
+    return jsonify(reset=True)
+
+
 @app.get("/api/health")
 def health():
     return jsonify(ok=True)
@@ -94,3 +104,4 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5055)
+
