@@ -115,6 +115,39 @@ def test_public_endpoint_is_operator_configured(tmp_path, monkeypatch):
         assert client.get("/connection-info").json() == {"endpoint": "https://qa.example.com/mcp"}
 
 
+def test_workspace_context_requires_valid_key(tmp_path, monkeypatch):
+    monkeypatch.setenv("FEENA_WORKSPACE_NAME", "Team QA")
+    monkeypatch.setenv("FEENA_ENVIRONMENT_NAME", "Disposable checkout")
+    runs = manager(tmp_path)
+    app = http_app(create_server(runs, ["testserver"]), runs, "x" * 40)
+    with TestClient(app) as client:
+        for path in ("/", "/connection-info", "/health", "/connection-check"):
+            assert "Team QA" not in client.get(path).text
+            assert "Disposable checkout" not in client.get(path).text
+        invalid = client.get("/connection-check", headers={"Authorization": "Bearer wrong"})
+        assert invalid.status_code == 401
+        assert "Team QA" not in invalid.text
+        response = client.get("/connection-check", headers={"Authorization": "Bearer " + "x" * 40})
+        assert response.headers["cache-control"] == "no-store"
+        assert response.json() == {"connected": True, "workspace": {
+            "name": "Team QA", "environment": "Disposable checkout",
+            "journey_count": len(runs.list_scenarios()),
+        }}
+        assert "127.0.0.1" not in response.text
+        assert "x" * 40 not in response.text
+
+
+def test_workspace_context_defaults_do_not_invent_environment(tmp_path, monkeypatch):
+    monkeypatch.delenv("FEENA_WORKSPACE_NAME", raising=False)
+    monkeypatch.delenv("FEENA_ENVIRONMENT_NAME", raising=False)
+    runs = manager(tmp_path)
+    with TestClient(http_app(create_server(runs, ["testserver"]), runs, "x" * 40)) as client:
+        response = client.get("/connection-check", headers={"Authorization": "Bearer " + "x" * 40})
+        workspace = response.json()["workspace"]
+        assert workspace["name"] == "Private Feena workspace"
+        assert workspace["environment"] == "Ask your administrator to confirm the test environment"
+
+
 def test_campaign_mcp_and_legacy_run_share_durable_queue(tmp_path, monkeypatch):
     import json
 

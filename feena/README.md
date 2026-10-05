@@ -296,7 +296,8 @@ application code or every networking mechanism.
 ## MCP server (single-workspace preview)
 
 Install `pip install -e '.[mcp]'` and `playwright install chromium`. The MCP service exposes
-`list_scenarios`, `start_run`, `get_run`, and `cancel_run` using the official Python MCP SDK.
+`list_scenarios`, `start_run`, `get_run`, `cancel_run`, `start_campaign`, `get_campaign`, and
+`cancel_campaign` using the official Python MCP SDK.
 Runs execute asynchronously in separate worker processes; poll `get_run` until completed,
 cancelled, timed_out, or error. A completed run can contain failed or inconclusive profiles.
 
@@ -334,12 +335,21 @@ Put the service behind HTTPS. Connect to `https://mcp.your-domain.example/mcp` w
 is public and reveals only service availability. This is static bearer authentication,
 **not OAuth**, so OAuth-only MCP clients are not supported yet.
 
-The service currently permits one active run, a 120-second execution budget, and 100 runs
-per process lifetime. Cancellation kills the worker/browser process group but cannot undo
-application writes. Results are in memory until restart; evidence remains under `.feena/mcp`
-until the operator deletes it. Keep that directory private and apply a disk/retention policy.
-Raw traces/screenshots are not returned over MCP. The same bearer token grants access to all
-runs: this is **single-workspace**, not multi-tenant production hosting.
+The hosted service uses a durable SQLite campaign queue shared by the campaign and legacy
+run APIs. Configure 1–16 isolated worker targets, with one active browser job per slot, a
+120-second budget per job, up to 100 jobs per campaign, and 1,000 jobs per store. Results and
+queued scenario snapshots survive restarts. Interrupted active work requires operator cleanup
+and explicit recovery; see [DEPLOY.md](DEPLOY.md) before restarting an interrupted service.
+
+Campaigns report `completed` only when all assertions pass; `failed` indicates an assertion
+failure and `inconclusive` indicates execution uncertainty. The legacy run API retains its
+execution-oriented `completed` status, so inspect its individual `results` as well.
+Cancellation kills the worker/browser process group but cannot undo application writes.
+Evidence remains under `.feena/mcp` until the operator deletes it. Keep that directory private
+and apply a disk/retention policy. Raw traces/screenshots are not returned over MCP. The same
+bearer token grants access to all runs: this is **single-workspace**, not multi-tenant
+production hosting. Optional `FEENA_WORKSPACE_NAME` and `FEENA_ENVIRONMENT_NAME` display labels
+help users confirm their workspace after key verification; never put secrets in these labels.
 
 `scripts/serve_mcp_demo.py` starts the checkout fixture and HTTP MCP service for a managed
 preview. Its generated token is stored locally at `.feena/mcp-token` with mode 0600 and is

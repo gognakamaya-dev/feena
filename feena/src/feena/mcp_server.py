@@ -108,9 +108,12 @@ class Runs:
 
 
 class AccessToken:
-    def __init__(self, app, token: str, public_url: str | None = None):
+    def __init__(self, app, token: str, public_url: str | None = None,
+                 workspace: dict | None = None):
         self.app, self.token = app, token
         self.public_url = public_url
+        # Display labels only; never expose target URLs, credentials, or filesystem paths.
+        self.workspace = workspace
         if public_url:
             parsed = urlsplit(public_url)
             if (parsed.scheme != "https" or not parsed.hostname or parsed.username
@@ -139,7 +142,10 @@ class AccessToken:
                                    headers={"WWW-Authenticate": "Bearer"})(scope, receive, send)
                 return
             if scope["path"] == "/connection-check" and scope["method"] == "GET":
-                await JSONResponse({"connected": True}, headers=private_headers)(scope, receive, send)
+                result = {"connected": True}
+                if self.workspace is not None:
+                    result["workspace"] = self.workspace
+                await JSONResponse(result, headers=private_headers)(scope, receive, send)
                 return
         await self.app(scope, receive, send)
 
@@ -247,7 +253,13 @@ def http_app(server: FastMCP, runs: Runs | CampaignRuns, token: str):
                 await runs.close()
 
     app.router.lifespan_context = lifespan
-    return AccessToken(app, token, os.environ.get("FEENA_MCP_PUBLIC_URL"))
+    workspace = {
+        "name": os.environ.get("FEENA_WORKSPACE_NAME") or "Private Feena workspace",
+        "environment": os.environ.get("FEENA_ENVIRONMENT_NAME") or
+                       "Ask your administrator to confirm the test environment",
+        "journey_count": len(runs.list_scenarios()),
+    }
+    return AccessToken(app, token, os.environ.get("FEENA_MCP_PUBLIC_URL"), workspace)
 
 
 def main():
