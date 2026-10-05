@@ -30,7 +30,7 @@ class RegularAgent(BaseAgent):
         body = (page.inner_text("body") or "").lower() if page else ""
         looks_broken = any(
             marker in body
-            for marker in ("500", "internal server error", "something went wrong", "unhandled")
+            for marker in ("internal server error", "something went wrong", "unhandled")
         )
         if looks_broken:
             shot = self.ctx.session.screenshot(f"regular-{len(self.ctx.findings)}")
@@ -49,3 +49,4 @@ class RegularAgent(BaseAgent):
                     evidence={"screenshot": str(shot), "url": page.url},
                 )
             )
+

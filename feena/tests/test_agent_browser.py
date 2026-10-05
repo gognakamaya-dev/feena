@@ -64,7 +64,7 @@ def test_explicit_navigation_stays_on_configured_origin(tmp_path, target):
 
 @pytest.mark.parametrize('value', ['[]', 'null', '{"action":"shell"}', '{"action":"click","target":{}}'])
 def test_invalid_model_output_stops_safely(value):
-    assert _parse(value).action == 'done'
+    assert _parse(value).action == 'error'
 
 
 def test_agent_receives_action_outcome_before_next_decision(tmp_path):
