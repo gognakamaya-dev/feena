@@ -25,6 +25,15 @@ Configure these secrets/settings at your hosting provider:
 | `FEENA_MCP_TOKEN` | Random secret, at least 32 characters; share privately with authorized users |
 | `FEENA_MCP_PUBLIC_URL` | Stable HTTPS endpoint, e.g. `https://qa.example.com/mcp` |
 | `FEENA_MCP_HOSTS` | Exact public hostname, e.g. `qa.example.com` |
+| `FEENA_WORKSPACE_NAME` | Optional display label, e.g. `Acme QA` |
+| `FEENA_ENVIRONMENT_NAME` | Optional display label, e.g. `Disposable staging checkout` |
+
+The display labels and configured journey count are returned only after a valid workspace
+key is supplied. Use human-readable labels, not internal URLs, paths, or secrets. A successful
+key check does not confirm Cursor installation: users should add Feena, then ask Cursor to
+list available tests using the copyable prompt on the page. The public sample result is an
+illustration of the bundled broken checkout, not a live run. Visitors without a key can read
+the hosting guide and inspect the example before asking their administrator for access.
 
 Terminate HTTPS at the hosting provider and forward to port 3000. The health route is `/health`.
 Do not configure the temporary Hoplite preview URL as the public installation URL. The onboarding
