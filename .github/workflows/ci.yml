@@ -16,3 +16,28 @@ jobs:
       - run: pip install -e '.[dev,mcp]'
       - run: playwright install --with-deps chromium
       - run: pytest -q
+  pilot-container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build hosted pilot
+        run: docker build -f feena/Dockerfile.render -t feena-pilot feena
+      - name: Smoke test hosted container
+        shell: bash
+        run: |
+          token=$(openssl rand -hex 32)
+          docker run -d --name feena-pilot -p 127.0.0.1:10000:10000 \
+            -v feena-evidence:/app/data \
+            -e FEENA_MCP_TOKEN="$token" \
+            -e RENDER_EXTERNAL_HOSTNAME=feena-pilot.onrender.com feena-pilot
+          curl --fail --silent --show-error --retry 40 --retry-delay 2 \
+            --retry-all-errors --max-time 2 http://127.0.0.1:10000/health
+          test "$(curl --silent -o /dev/null -w '%{http_code}' \
+            http://127.0.0.1:10000/connection-check)" = 401
+          curl --fail --silent --show-error -H "Authorization: Bearer $token" \
+            http://127.0.0.1:10000/connection-check
+          docker exec feena-pilot python -c \
+            'from playwright.sync_api import sync_playwright; p = sync_playwright().start(); b = p.chromium.launch(); page = b.new_page(); page.goto("http://127.0.0.1:5057"); assert page.title() == "Resilient checkout"; b.close(); p.stop()'
+      - name: Clean up hosted container
+        if: always()
+        run: docker rm -f feena-pilot || true

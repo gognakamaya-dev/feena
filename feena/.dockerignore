@@ -1,9 +1,14 @@
 *
 !Dockerfile
+!Dockerfile.render
 !pyproject.toml
 !README.md
 !src/
 !src/**
+!examples/
+!examples/resilient-checkout/
+!examples/resilient-checkout/app.py
+!examples/resilient-checkout/feena.yaml
 **/__pycache__
 **/*.pyc
 **/*.egg-info

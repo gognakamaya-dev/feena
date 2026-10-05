@@ -10,6 +10,14 @@ The application lives in [`feena/`](feena/).
 - [Hosted deployment and simple Cursor onboarding](feena/DEPLOY.md)
 - [Retry-safe checkout demo](feena/examples/resilient-checkout/)
 
+## Hosted demo on Render
+
+[Deploy Feena to Render](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2Fgognakamaya-dev%2Ffeena%2Ftree%2Fhoplite%2Fmassalia-94815731--render-pilot)
+
+This creates a **paid** single-workspace pilot with a disposable checkout demo and private
+evidence disk. Review the price in Render before approving. See the
+[setup and access-key instructions](feena/DEPLOY.md#deploy-the-first-render-pilot).
+
 ```bash
 cd feena
 pip install -e '.[dev,mcp]'

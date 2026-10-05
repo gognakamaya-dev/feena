@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: feena-pilot
+    runtime: docker
+    plan: 1c-2g
+    numInstances: 1
+    dockerfilePath: ./feena/Dockerfile.render
+    dockerContext: ./feena
+    autoDeployTrigger: 'off'
+    healthCheckPath: /health
+    disk:
+      name: feena-evidence
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: FEENA_MCP_TOKEN
+        generateValue: true
+      - key: FEENA_EVIDENCE_DIR
+        value: /app/data/runs

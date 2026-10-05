@@ -20,6 +20,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.6", "flask>=3.0", "mcp>=1.30,<2"]
 mcp = ["mcp>=1.30,<2"]
+pilot = ["mcp>=1.30,<2", "flask>=3.0", "gunicorn>=23,<24"]
 
 [project.scripts]
 feena = "feena.cli:main"
