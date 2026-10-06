@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Feena workspace</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f7f3;color:#192e2b;font:16px/1.6 system-ui,sans-serif}main{max-width:980px;margin:auto;padding:32px 22px}nav{display:flex;justify-content:space-between;gap:20px;align-items:center}h1{font-size:38px;letter-spacing:-.035em;line-height:1.15}h2{font-size:24px}h3{font-size:18px}a{color:#23664e}section,.card{background:white;border:1px solid #d9e2da;border-radius:14px;padding:24px;margin:20px 0}label{display:block;margin:12px 0}input[type=password]{width:100%;padding:12px;font:inherit;border:1px solid #a9bcb1;border-radius:8px}button,.button{display:inline-block;background:#23664e;color:white;border:0;border-radius:8px;padding:11px 18px;margin:6px 10px 6px 0;font:inherit;cursor:pointer;text-decoration:none}button:disabled{opacity:.5;cursor:wait}button.secondary{background:#e8ede5;color:#192e2b}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f7f3;padding:16px;border-radius:8px;font:14px/1.5 ui-monospace,monospace}p{overflow-wrap:anywhere}.muted{font-size:14px;color:#51645e}.badge{background:#e8ede5;border-radius:20px;padding:4px 12px;display:inline-block}button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #b25c15;outline-offset:3px}#message{min-height:26px}[hidden]{display:none!important}li{margin:8px 0}@media(max-width:600px){main{padding:20px 16px}section,.card{padding:18px}h1{font-size:30px}nav{flex-wrap:wrap}}
+</style></head><body><main>
+<nav><a href="/">FEENA</a><a href="#">Journeys</a><button class="secondary" id="logout" hidden>Lock workspace</button></nav>
+<h1>From a user goal to a repeatable test.</h1>
+<p>Review the journey, approve its exact version, and run it against your disposable test environment.</p>
+<section id="login"><h2>Open your workspace</h2><form id="auth"><label for="key">Workspace access key</label><input type="password" id="key" autocomplete="off" required><button>Unlock</button></form><p class="muted">Your key is kept only in this page’s memory. Evidence can contain test data; share links only with authorized teammates.</p></section>
+<p id="message" role="status" aria-live="polite"></p><div id="content" hidden></div>
+</main><script>
+const $=s=>document.querySelector(s), content=$('#content');
+let key='', generation=0, busy=false, timer=null;
+const requests=new Map();
+function element(tag,text,parent=content){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;parent.append(e);return e;}
+function button(text,fn,parent=content){const b=element('button',text,parent);b.type='button';b.onclick=()=>mutate(fn);return b;}
+function lock(){generation++;key='';$('#key').value='';content.replaceChildren();content.hidden=true;$('#login').hidden=false;$('#logout').hidden=true;requests.clear();clearTimeout(timer);$('#message').textContent='';}
+async function api(path,options={}){const controller=new AbortController(), timeout=setTimeout(()=>controller.abort(),15000);try{const r=await fetch('/workflow-api/'+path,{...options,headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},cache:'no-store',signal:controller.signal});if(r.status===401){lock();throw Error('The workspace key was not accepted.');}if(!r.ok)throw Error('Request failed. Refresh and check the journey version, approval, and run status.');return r;}finally{clearTimeout(timeout);}}
+async function json(path,body){return (await api(path,body===undefined?{}:{method:'POST',body:JSON.stringify(body)})).json();}
+async function mutate(fn){if(busy)return;busy=true;content.querySelectorAll('button').forEach(b=>b.disabled=true);try{await fn();$('#message').textContent='';}catch(e){$('#message').textContent=e.name==='AbortError'?'Request timed out. Retry to check the same operation.':e.message;}finally{busy=false;content.querySelectorAll('button').forEach(b=>b.disabled=false);}}
+async function download(path,name){const r=await api(path), url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
+async function start(path,body={}){if(!requests.has(path))requests.set(path,crypto.randomUUID());const run=await json(path,{...body,request_id:requests.get(path)});requests.delete(path);location.hash='run/'+run.campaign_id;await render();}
+async function render(){clearTimeout(timer);if(!key)return;const current=++generation;const [kind,id]=location.hash.slice(1).split('/');let data;
+try{data=await json(kind==='run'?'runs/'+encodeURIComponent(id):kind==='journey'?'journeys/'+encodeURIComponent(id):'journeys');if(current!==generation)return;content.replaceChildren();content.hidden=false;
+if(kind==='journey'){
+ element('span',data.status,content).className='badge';element('h2',data.proposal.scenario.goal);element('p','Version: '+data.version).className='muted';
+ element('h3','Starting data and reset requirements');element('p',data.proposal.setup);
+ element('h3','Assumptions to verify');const list=element('ul');for(const assumption of data.proposal.assumptions)element('li',assumption,list);if(!data.proposal.assumptions.length)element('p','No assumptions were listed. Check the steps and assertions against your app.');
+ element('h3','Steps');const steps=element('ol');for(const step of data.proposal.scenario.steps)element('li',step.action+' '+step.target+(step.value?' — '+step.value:''),steps);
+ element('h3','Expected outcomes');for(const assertion of data.proposal.scenario.assertions)element('pre',JSON.stringify(assertion,null,2));
+ element('h3','Network profiles');element('pre',JSON.stringify(data.proposal.scenario.profiles,null,2));
+ element('p','Running this journey resets and changes disposable test data. Approval is specific to this version; any revision needs a new review.');
+ if(data.status==='draft'){const label=element('label');const checkbox=element('input',undefined,label);checkbox.type='checkbox';label.append(document.createTextNode(' I reviewed the full steps, assumptions, expected outcomes, and disposable-data setup.'));
+ button('Approve this version',async()=>{if(!checkbox.checked)throw Error('Confirm that you reviewed this version first.');await json('journeys/'+id+'/approve',{version:data.version,reviewed:true});await render();});}
+ else{button('Run approved journey',()=>start('journeys/'+id+'/run',{version:data.version}));button('Download config for PR checks',()=>download('journeys/'+id+'/export','feena-approved.yaml'));}
+ const details=element('details');element('summary','Full reviewed definition',details);element('pre',JSON.stringify(data.proposal,null,2),details);
+}else if(kind==='run'){
+ element('span',data.status).className='badge';element('h2','Journey run');const link=element('a','View approved journey');link.href='#journey/'+data.journey_id;element('p','Version: '+data.version).className='muted';element('p',data.reset_policy);
+ if(data.rerun_of){const a=element('a','View original run');a.href='#run/'+data.rerun_of;}
+ for(const job of data.jobs){const card=element('section');element('h3',job.scenario+' · '+job.profile,card);element('p','Status: '+job.status,card);if(job.reason)element('p',job.reason,card);if(job.observed_result)element('p',job.observed_result,card);const expected=element('details',undefined,card);element('summary','Expected outcomes',expected);element('pre',JSON.stringify(job.expected_outcomes,null,2),expected);for(const artifact of job.evidence){button('Download '+artifact.name,()=>download(artifact.download.replace('/workflow-api/',''),artifact.name),card);if(artifact.name==='final.png')button('View screenshot',async()=>{const r=await api(artifact.download.replace('/workflow-api/',''));const url=URL.createObjectURL(await r.blob());const img=element('img',undefined,card);img.alt='Final browser screenshot';img.style.maxWidth='100%';img.onload=()=>URL.revokeObjectURL(url);img.src=url;},card);}if(!job.evidence.length)element('p','Evidence is not available yet.',card);}
+ if(['queued','running','cancelling'].includes(data.status)){button('Cancel run',async()=>{await json('runs/'+id+'/cancel',{});await render();});timer=setTimeout(()=>{if(!busy)render();else timer=setTimeout(render,3000);},3000);}else button('Reset and rerun this version',()=>start('runs/'+id+'/rerun'));
+ element('p','Completed means the configured assertions passed. Inconclusive means execution did not establish a reliable result. Evidence may contain sensitive test data.').className='muted';
+}else{
+ element('h2','Workspace journeys');button('Check environment readiness',async()=>{const r=await json('readiness');const panel=element('section');element('h3','Readiness checks',panel);element('p','Browser installed: '+r.browser_executable_present+' · Reset configured: '+r.reset_configured,panel);for(const t of r.targets)element('p','Target '+t.slot+': '+(t.reachable?'reachable':'unreachable'),panel);element('p','This check does not launch a browser, reset data, or verify test credentials.',panel);});
+ element('p','In Cursor, describe your goal and ask Feena to submit a journey proposal. Review its assumptions here before running.');
+ if(!data.length)element('p','No proposals yet. Start with one important flow, such as checkout.');
+ for(const j of data){const card=element('section');const a=element('a',j.name,card);a.href='#journey/'+j.journey_id;element('p',j.status,card);}
+}
+}catch(e){if(current===generation)$('#message').textContent=e.message;}}
+$('#auth').onsubmit=async e=>{e.preventDefault();key=$('#key').value.trim();try{await json('journeys');$('#key').value='';$('#login').hidden=true;$('#logout').hidden=false;await render();}catch(e){key='';$('#message').textContent=e.message;}};
+$('#logout').onclick=lock;window.addEventListener('hashchange',()=>{if(!busy)render();});window.addEventListener('pagehide',lock);
+</script></body></html>

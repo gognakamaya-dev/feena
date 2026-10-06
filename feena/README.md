@@ -475,3 +475,21 @@ fixtures before replay. Candidate metadata explicitly indicates that replay requ
 and test inputs. These changes preserve investigation evidence but do not automatically
 convert arbitrary exploratory behavior into a supported executable reproduction. Use the
 reviewed journey proposal/configuration flow for explicit UI/backend assertions and replay.
+
+
+
+## Integrated workspace workflow
+
+The opt-in `--enable-workflow` MCP service connects approved proposals to the durable runner
+and a private `/workspace` review/results interface. Cursor can submit a typed proposal, share
+its review link, run a browser-approved immutable version, inspect results, and request a rerun.
+The website requires the workspace key and shows profile statuses, expected outcomes, worker
+explanations, screenshots and downloadable replay evidence. No hashes or local filenames need
+to be copied during normal review. Revisions require fresh approval; repeated transport requests
+reuse an idempotency key instead of starting duplicate work.
+
+`workflow-ci` and the action's hosted-workspace inputs run those same approved versions and
+link PR/job summaries to the same authenticated results page. Operator setup is still required:
+a reset endpoint, dedicated disposable targets, a stable HTTPS service, and deployment of the
+correct PR commit. See [DEPLOY.md](DEPLOY.md#reviewed-cursor--browser--ci-workflow-opt-in) for
+setup, limitations, evidence privacy, and initial report-only CI adoption.

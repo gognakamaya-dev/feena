@@ -13,7 +13,25 @@ inputs:
     description: >
       URL of your app, already running on the runner (e.g. http://localhost:3000). Start it in an
       earlier step. Only loopback/private addresses are accepted; Feena never tests a public host.
-    required: true
+    required: false
+  workspace-url:
+    description: "Optional HTTPS workspace URL for an approved hosted journey. Overrides local scan mode."
+    default: ""
+  workspace-journey:
+    description: "Approved hosted journey ID."
+    default: ""
+  workspace-version:
+    description: "Exact approved hosted journey version digest."
+    default: ""
+  workspace-request-id:
+    description: "Optional unique request ID for matrix jobs or multiple identical invocations. Reuse only after transport errors."
+    default: ""
+  workspace-key:
+    description: "Workspace access key; pass a GitHub Actions secret."
+    default: ""
+  report-only:
+    description: "Hosted mode: report failed/inconclusive results without failing the job."
+    default: "true"
   config:
     description: "Path to feena.yaml (seeded test accounts). Optional."
     default: "feena.yaml"
@@ -70,7 +88,7 @@ runs:
       run: python -m pip install --quiet "$FEENA_SRC"
 
     - name: Install browser
-      if: inputs.browser == 'true'
+      if: inputs.browser == 'true' && inputs.workspace-url == ''
       shell: bash
       run: python -m playwright install --with-deps chromium
 
@@ -80,6 +98,12 @@ runs:
       id: feena
       shell: bash
       env:
+        FEENA_WORKSPACE_URL: ${{ inputs.workspace-url }}
+        FEENA_WORKSPACE_JOURNEY: ${{ inputs.workspace-journey }}
+        FEENA_WORKSPACE_VERSION: ${{ inputs.workspace-version }}
+        FEENA_WORKSPACE_KEY: ${{ inputs.workspace-key }}
+        FEENA_WORKSPACE_REQUEST_ID: ${{ inputs.workspace-request-id }}
+        FEENA_REPORT_ONLY: ${{ inputs.report-only }}
         FEENA_URL: ${{ inputs.url }}
         FEENA_CONFIG: ${{ inputs.config }}
         FEENA_TESTS: ${{ inputs.tests }}
@@ -89,6 +113,17 @@ runs:
         FEENA_COMMENT: ${{ inputs.comment }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
+        if [ -n "$FEENA_WORKSPACE_URL" ]; then
+          if [ -z "$FEENA_WORKSPACE_REQUEST_ID" ]; then
+            FEENA_WORKSPACE_REQUEST_ID="$(python -c 'import hashlib,os; print(hashlib.sha256("|".join(os.environ.get(k, "") for k in ("GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT", "GITHUB_JOB", "FEENA_WORKSPACE_URL", "FEENA_WORKSPACE_JOURNEY", "FEENA_WORKSPACE_VERSION")).encode()).hexdigest())')"
+          fi
+          args=(workflow-ci --endpoint "$FEENA_WORKSPACE_URL" --journey "$FEENA_WORKSPACE_JOURNEY"
+                --version "$FEENA_WORKSPACE_VERSION" --request-id "$FEENA_WORKSPACE_REQUEST_ID")
+          if [ "$FEENA_REPORT_ONLY" = "true" ]; then args+=(--report-only); fi
+          if [ "$FEENA_COMMENT" = "true" ]; then args+=(--comment); fi
+          feena "${args[@]}"
+          exit $?
+        fi
         args=(ci --url "$FEENA_URL" --config "$FEENA_CONFIG" --tests "$FEENA_TESTS" \
               --baseline "$FEENA_BASELINE" --fail-on "$FEENA_FAIL_ON" --wait "$FEENA_WAIT")
         if [ "$FEENA_COMMENT" != "true" ]; then args+=(--no-comment); fi
@@ -105,3 +140,4 @@ runs:
           .feena/verification.json
           .feena/tests
         if-no-files-found: ignore
+

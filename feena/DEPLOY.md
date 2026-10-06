@@ -125,3 +125,85 @@ only queued jobs resume. Remove the flag from normal startup configuration: it i
 operator acknowledgement, not automatic recovery or a substitute for process cleanup.
 
 This is bounded parallel execution on one host, not multi-tenant or distributed hosting.
+
+
+## Reviewed Cursor → browser → CI workflow (opt-in)
+
+Enable `--enable-workflow --reset-path /test/reset` alongside the existing HTTPS/key/config
+settings. This extends the service from fixed configured journeys to new explicitly reviewed
+journeys. Use only a trusted team and a dedicated disposable environment. The reset endpoint
+must synchronously restore each target's documented starting data before returning 2xx.
+
+Open `/workspace` with the existing workspace key. Keys stay in page memory and are never put
+in URLs. Drafts, approvals, runs and evidence downloads require authentication. The shared key
+is still workspace-wide; approval is a review acknowledgement, not individual identity/audit
+attribution. No OAuth or per-user roles have been added.
+
+In Cursor:
+1. Call `check_workspace_readiness` and `list_journeys`.
+2. Ask the assistant to prepare a `JourneyProposal` from the goal and known app/API details,
+   then call `submit_journey_proposal`. It must include setup, assumptions, and both UI and
+   backend assertions. This tool saves a draft; it does not generate or execute code on the host.
+3. Open the returned review link, inspect the full definition, and approve that exact version.
+   Approval is a separate browser action; there is intentionally no MCP approval tool.
+4. Click Run, or explicitly ask Cursor to call `run_journey` with that ID/version and a fresh
+   request ID. Reuse the request ID after a transport failure to avoid duplicate campaigns.
+5. Use `get_journey_run` and its authenticated results link to inspect profile statuses,
+   expected outcomes, worker explanations, screenshots, action records, manifests and traces.
+6. After a fix, call `rerun_journey`. It uses the original approved version and resets before
+   each profile. A new proposal/revision needs separate approval. Cancellation does not undo writes.
+
+A single service owns the SQLite store, including approvals and run provenance. Preserve the
+whole output directory. Proposal definitions are immutable; revisions get new IDs. Maximum
+200 proposals per store; existing campaign/worker limits still apply. Stdio clients receive
+relative review URLs unless `FEENA_MCP_PUBLIC_URL` is configured; approvals require the HTTP UI.
+
+Readiness checks executable presence and a bounded GET of each target root. It does not launch
+Chromium, perform resets, or validate login credentials. A reachable login page is not proof
+that a journey can authenticate. Unknown APIs and fixture assumptions still need operator review.
+
+### PR checks using the same results page
+
+The composite action in `feena/action.yml` accepts `workspace-url`, `workspace-journey`,
+`workspace-version`, and `workspace-key`. Pass the key from GitHub Actions secrets, and pin the
+Feena action to a reviewed commit. Hosted mode reuses the same approved runner and posts one
+Feena comment with its authenticated results URL. `report-only` defaults to `true`; set it to
+`false` once that suite has demonstrated reliable results. Request/authentication failures still
+fail the job. The default idempotency ID includes the GitHub run, attempt, job, workspace and journey
+version. For matrix jobs sharing those values or repeated identical invocations, set distinct
+`workspace-request-id` inputs; reuse them only to retry a lost response.
+
+**The workspace target must already be deployed to the commit under review.** This integration
+does not provision or discover PR environments, bind target deployments to Git SHAs, or prevent
+a deployment from changing mid-run. Use a dedicated workspace/isolated target per concurrent
+PR. Do not use a shared mutable staging deployment as a merge gate. Do not expose workspace
+secrets to fork PRs or use `pull_request_target` to execute untrusted checkout code.
+
+A trusted CI job can also run:
+
+```bash
+# FEENA_WORKSPACE_KEY is supplied as a CI secret, not a command-line argument.
+feena workflow-ci --endpoint https://qa.example.com --journey APPROVED_ID \
+  --version APPROVED_DIGEST --request-id UNIQUE_CI_ATTEMPT --report-only --comment
+```
+
+Alternatively, download an approved config and commit it to your app repository. The existing
+local Feena action can run it against a disposable app on the CI runner; that mode retains local
+artifacts and does not create hosted results links. Restore the documented starting data first.
+
+Evidence can contain credentials and page data. It is now downloadable by authorized workspace
+key holders when workflow mode is enabled. The results page uses authenticated fetches; traces
+remain downloads rather than an embedded third-party viewer. Apply retention and restrict the
+workspace key to people authorized to see this evidence.
+
+### First complete checkout pilot
+
+Use the bundled `examples/workflow/checkout-proposal.json` as the proposal definition. In a
+local disposable environment, start the checkout fixture with `FEENA_DEMO_RESET=1 python
+examples/resilient-checkout/app.py`. Its `/test/reset` route is disabled unless this explicit
+opt-in is set. Start Feena with the existing checkout config, that target, `--enable-workflow`,
+and `--reset-path /test/reset`; use the previously documented HTTPS/token settings for HTTP.
+Ask Cursor to submit this proposal, open its review link, approve, run, inspect the profile
+results, and rerun. The proposal tests one order across normal, delayed, aborted, and lost
+response profiles. This is a runnable pilot definition, not a claim that live browser tests
+were executed in the implementation environment.

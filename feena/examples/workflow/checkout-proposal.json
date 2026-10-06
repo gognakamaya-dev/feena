@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "setup": "Use the bundled disposable checkout demo with FEENA_DEMO_RESET=1 and --reset-path /test/reset. The reset clears all demo orders before each profile. No real payments or production accounts.",
+  "assumptions": [
+    "This proposal is only for the bundled resilient-checkout fixture; verify routes and assertions before adapting it to another app."
+  ],
+  "scenario": {
+    "name": "retry-checkout",
+    "goal": "Complete one order even when a request is delayed, aborted, or committed but its response is lost.",
+    "timeout_ms": 5000,
+    "steps": [
+      {
+        "action": "goto",
+        "target": "/"
+      },
+      {
+        "action": "click",
+        "target": "#checkout"
+      },
+      {
+        "action": "wait",
+        "wait_ms": 700
+      },
+      {
+        "action": "click",
+        "target": "#checkout"
+      },
+      {
+        "action": "wait",
+        "wait_ms": 700
+      }
+    ],
+    "assertions": [
+      {
+        "kind": "text",
+        "target": "#status",
+        "expected": "Order confirmed."
+      },
+      {
+        "kind": "text",
+        "target": "#count",
+        "expected": "1"
+      },
+      {
+        "kind": "json",
+        "target": "/api/state",
+        "expected": {
+          "orders": 1
+        }
+      }
+    ],
+    "profiles": [
+      {
+        "name": "normal",
+        "effect": "normal"
+      },
+      {
+        "name": "slow-response",
+        "effect": "delay",
+        "path": "/api/orders",
+        "method": "POST",
+        "delay_ms": 250
+      },
+      {
+        "name": "aborted-request",
+        "effect": "abort",
+        "path": "/api/orders",
+        "method": "POST"
+      },
+      {
+        "name": "lost-response",
+        "effect": "drop_response",
+        "path": "/api/orders",
+        "method": "POST"
+      }
+    ]
+  }
+}
