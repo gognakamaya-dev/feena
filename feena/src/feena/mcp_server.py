@@ -18,6 +18,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from starlette.responses import HTMLResponse, JSONResponse
 
 from .campaigns import Campaigns
+from .journeys import JourneyProposal
 from .config import load_config
 from .sandbox import attach
 
@@ -109,11 +110,12 @@ class Runs:
 
 class AccessToken:
     def __init__(self, app, token: str, public_url: str | None = None,
-                 workspace: dict | None = None):
+                 workspace: dict | None = None, workflow=None):
         self.app, self.token = app, token
         self.public_url = public_url
         # Display labels only; never expose target URLs, credentials, or filesystem paths.
         self.workspace = workspace
+        self.workflow = workflow
         if public_url:
             parsed = urlsplit(public_url)
             if (parsed.scheme != "https" or not parsed.hostname or parsed.username
@@ -128,6 +130,10 @@ class AccessToken:
                 await HTMLResponse(Path(__file__).with_name("onboarding.html").read_text(),
                                    headers=private_headers)(scope, receive, send)
                 return
+            if self.workflow and scope["path"] == "/workspace" and scope["method"] == "GET":
+                await HTMLResponse(Path(__file__).with_name("workspace.html").read_text(),
+                                   headers=private_headers)(scope, receive, send)
+                return
             if scope["path"] == "/connection-info" and scope["method"] == "GET":
                 await JSONResponse({"endpoint": self.public_url}, headers=private_headers)(scope, receive, send)
                 return
@@ -140,6 +146,11 @@ class AccessToken:
             if not secrets.compare_digest(supplied, ("Bearer " + self.token).encode()):
                 await JSONResponse({"error": "Unauthorized"}, status_code=401,
                                    headers={"WWW-Authenticate": "Bearer"})(scope, receive, send)
+                return
+            if self.workflow and scope["path"].startswith("/workflow-api/"):
+                from .workflow_http import handle
+                response = await handle(self.workflow, scope, receive, private_headers)
+                await response(scope, receive, send)
                 return
             if scope["path"] == "/connection-check" and scope["method"] == "GET":
                 result = {"connected": True}
@@ -189,7 +200,7 @@ class CampaignRuns:
 
 
 def create_server(runs: Runs | CampaignRuns, hosts: list[str],
-                  campaigns: Campaigns | None = None) -> FastMCP:
+                  campaigns: Campaigns | None = None, workflow=None) -> FastMCP:
     server = FastMCP(
         "Feena UX QA", instructions="List configured journeys; start one run or a campaign, then poll its status. "
         "Runs mutate disposable test data. A failed journey needs investigation, not an automatic fix.",
@@ -235,10 +246,54 @@ def create_server(runs: Runs | CampaignRuns, hosts: list[str],
             """Cancel queued and active jobs; application writes are not rolled back."""
             return await campaigns.cancel(campaign_id)
 
+    if workflow is not None:
+        @server.tool()
+        def submit_journey_proposal(proposal: JourneyProposal, revision_of: str | None = None) -> dict:
+            """Save an untrusted draft with setup, assumptions and UI/backend assertions.
+
+            Does not execute tests. Ask the user to review and approve using review_url.
+            Never invent backend contracts: mark unknowns in assumptions for user review.
+            """
+            return workflow.submit(proposal.model_dump(), revision_of)
+
+        @server.tool()
+        def list_journeys() -> list[dict]:
+            """List workspace drafts and approved immutable journey versions."""
+            return workflow.list()
+
+        @server.tool()
+        def get_journey(journey_id: str) -> dict:
+            """Read the exact proposal and its approval status; share review_url with the user."""
+            return workflow.get(journey_id)
+
+        @server.tool()
+        async def run_journey(journey_id: str, version: str, request_id: str) -> dict:
+            """Run an approved version after the user requests execution. Mutates disposable data.
+
+            Use one unique request_id per intended run and reuse it if a response is lost.
+            """
+            return await workflow.start(journey_id, version, request_id)
+
+        @server.tool()
+        def get_journey_run(run_id: str) -> dict:
+            """Read status, reviewed version and authenticated evidence links."""
+            return workflow.run(run_id)
+
+        @server.tool()
+        async def rerun_journey(run_id: str, request_id: str) -> dict:
+            """Rerun the original approved version after completion and an explicit user request."""
+            original = workflow.run(run_id)
+            return await workflow.start(original['journey_id'], original['version'], request_id, rerun_of=run_id)
+
+        @server.tool()
+        async def check_workspace_readiness() -> dict:
+            """Check browser installation and target reachability. Does not reset or run tests."""
+            return await workflow.readiness()
+
     return server
 
 
-def http_app(server: FastMCP, runs: Runs | CampaignRuns, token: str):
+def http_app(server: FastMCP, runs: Runs | CampaignRuns, token: str, workflow=None):
     app = server.streamable_http_app()
     original = app.router.lifespan_context
 
@@ -259,11 +314,13 @@ def http_app(server: FastMCP, runs: Runs | CampaignRuns, token: str):
                        "Ask your administrator to confirm the test environment",
         "journey_count": len(runs.list_scenarios()),
     }
-    return AccessToken(app, token, os.environ.get("FEENA_MCP_PUBLIC_URL"), workspace)
+    return AccessToken(app, token, os.environ.get("FEENA_MCP_PUBLIC_URL"), workspace, workflow)
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--enable-workflow", action="store_true",
+                        help="Enable reviewed proposals and private results; requires --reset-path.")
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--target", required=True, action="append",
                         help="Disposable backend slot; repeat for parallel isolated workers.")
@@ -280,7 +337,13 @@ def main():
     campaigns = Campaigns(args.config, args.target, args.out, reset_path=args.reset_path,
                           recover_interrupted=args.recover_interrupted)
     runs = CampaignRuns(campaigns)
-    server = create_server(runs, hosts, campaigns)
+    workflow = None
+    if args.enable_workflow:
+        from .workflow import Workflow
+        if not args.reset_path:
+            parser.error("--enable-workflow requires --reset-path for disposable test data")
+        workflow = Workflow(campaigns, os.environ.get("FEENA_MCP_PUBLIC_URL"))
+    server = create_server(runs, hosts, campaigns, workflow)
     if args.transport == "stdio":
         async def serve_stdio():
             try:
@@ -294,8 +357,9 @@ def main():
         token = os.environ.get("FEENA_MCP_TOKEN", "")
         if len(token) < 32:
             parser.error("HTTP requires FEENA_MCP_TOKEN with at least 32 characters")
-        uvicorn.run(http_app(server, runs, token), host=args.host, port=args.port)
+        uvicorn.run(http_app(server, runs, token, workflow), host=args.host, port=args.port)
 
 
 if __name__ == "__main__":
     main()
+
